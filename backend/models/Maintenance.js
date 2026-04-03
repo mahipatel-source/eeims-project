@@ -8,7 +8,10 @@ const Maintenance = sequelize.define('Maintenance', {
   scheduledDate: { type: DataTypes.DATE, allowNull: false },
   completedDate: { type: DataTypes.DATE },
   status: { type: DataTypes.ENUM('pending', 'completed', 'overdue'), defaultValue: 'pending' },
-  notes: { type: DataTypes.STRING },
-}, { tableName: 'maintenances', timestamps: true });
+  notes: { type: DataTypes.TEXT },
+  createdBy: { type: DataTypes.INTEGER, allowNull: true },
+  updatedBy: { type: DataTypes.INTEGER, allowNull: true },
+  deletedBy: { type: DataTypes.INTEGER, allowNull: true },
+}, { tableName: 'maintenances', timestamps: true, paranoid: true });
 
 module.exports = Maintenance;

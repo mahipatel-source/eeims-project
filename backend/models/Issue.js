@@ -9,7 +9,10 @@ const Issue = sequelize.define('Issue', {
   returnDate: { type: DataTypes.DATE },
   status: { type: DataTypes.ENUM('issued', 'returned'), allowNull: false, defaultValue: 'issued' },
   quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
-  remarks: { type: DataTypes.STRING },
-}, { tableName: 'issues', timestamps: true });
+  remarks: { type: DataTypes.TEXT },
+  createdBy: { type: DataTypes.INTEGER, allowNull: true },
+  updatedBy: { type: DataTypes.INTEGER, allowNull: true },
+  deletedBy: { type: DataTypes.INTEGER, allowNull: true },
+}, { tableName: 'issues', timestamps: true, paranoid: true });
 
 module.exports = Issue;
