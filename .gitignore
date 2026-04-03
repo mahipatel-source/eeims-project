@@ -1,17 +1,12 @@
-# Dependencies
-node_modules/
-frontend/node_modules/
+# Backend
 backend/node_modules/
-
-# Environment files
-.env
 backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
 frontend/.env
 
-# Build files
-dist/
-frontend/dist/
-
-# System files
+# System
 .DS_Store
-Thumbs.db     
+Thumbs.db
