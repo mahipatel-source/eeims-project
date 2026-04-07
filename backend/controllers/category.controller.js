@@ -100,9 +100,8 @@ exports.deleteCategory = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
-    // soft delete
-    await category.update({ deletedBy: req.user.id });
-    await category.destroy();
+    // hard delete — permanently removes from database
+    await category.destroy({ force: true });
 
     return res.json({ success: true, message: 'Category deleted successfully' });
   } catch (err) {

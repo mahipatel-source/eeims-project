@@ -14,6 +14,8 @@ const maintenanceRoutes = require('./routes/maintenance.routes');
 const alertRoutes = require('./routes/alert.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const reportRoutes = require('./routes/report.routes');
+const startLowStockChecker = require('./utils/lowStockChecker');
+const startMaintenanceChecker = require('./utils/maintenanceChecker');
 
 // error middleware
 const errorMiddleware = require('./middleware/error.middleware');
@@ -58,10 +60,15 @@ sequelize.authenticate()
     return sequelize.sync({ alter: true });
   })
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-    });
-  })
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+
+    // start cron jobs
+    startLowStockChecker();
+    startMaintenanceChecker();
+    console.log('⏰ Cron jobs started');
+  });
+})
   .catch((err) => {
     console.error('❌ Database connection failed:', err);
   });

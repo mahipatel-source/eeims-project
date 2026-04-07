@@ -8,31 +8,31 @@ const Maintenance = require('./Maintenance');
 const Alert = require('./Alert');
 
 // Category → Equipment
-Category.hasMany(Equipment, { foreignKey: 'categoryId', onDelete: 'SET NULL' });
+Category.hasMany(Equipment, { foreignKey: 'categoryId', onDelete: 'SET NULL', constraints: false });
 Equipment.belongsTo(Category, { foreignKey: 'categoryId' });
 
 // Location → Equipment
-Location.hasMany(Equipment, { foreignKey: 'locationId', onDelete: 'SET NULL' });
+Location.hasMany(Equipment, { foreignKey: 'locationId', onDelete: 'SET NULL', constraints: false });
 Equipment.belongsTo(Location, { foreignKey: 'locationId' });
 
 // Equipment → Issue
-Equipment.hasMany(Issue, { foreignKey: 'equipmentId' });
+Equipment.hasMany(Issue, { foreignKey: 'equipmentId', constraints: false });
 Issue.belongsTo(Equipment, { foreignKey: 'equipmentId' });
 
 // User → Issue
-User.hasMany(Issue, { foreignKey: 'userId' });
+User.hasMany(Issue, { foreignKey: 'userId', constraints: false });
 Issue.belongsTo(User, { foreignKey: 'userId' });
 
 // Equipment → Maintenance
-Equipment.hasMany(Maintenance, { foreignKey: 'equipmentId' });
+Equipment.hasMany(Maintenance, { foreignKey: 'equipmentId', constraints: false });
 Maintenance.belongsTo(Equipment, { foreignKey: 'equipmentId' });
 
 // User → Maintenance
-User.hasMany(Maintenance, { foreignKey: 'technicianId', as: 'technician' });
+User.hasMany(Maintenance, { foreignKey: 'technicianId', as: 'technician', constraints: false });
 Maintenance.belongsTo(User, { foreignKey: 'technicianId', as: 'technician' });
 
 // Equipment → Alert
-Equipment.hasMany(Alert, { foreignKey: 'equipmentId' });
+Equipment.hasMany(Alert, { foreignKey: 'equipmentId', constraints: false });
 Alert.belongsTo(Equipment, { foreignKey: 'equipmentId' });
 
 module.exports = {

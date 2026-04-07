@@ -10,6 +10,10 @@ const Alert = sequelize.define('Alert', {
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
   updatedBy: { type: DataTypes.INTEGER, allowNull: true },
   deletedBy: { type: DataTypes.INTEGER, allowNull: true },
-}, { tableName: 'alerts', timestamps: true, paranoid: true });
+}, {
+  tableName: 'alerts',
+  timestamps: true,
+  paranoid: true,
+});
 
 module.exports = Alert;

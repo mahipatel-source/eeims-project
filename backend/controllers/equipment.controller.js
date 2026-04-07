@@ -121,10 +121,22 @@ exports.updateEquipment = async (req, res) => {
       updatedBy: req.user.id,
     });
 
-    // check if stock dropped below minimum after update
-    if (equipment.quantity <= equipment.minimumStock) {
-      const { Alert } = require('../models');
+    const { Alert } = require('../models');
 
+    // if stock is now above minimum, clear old low-stock alerts
+    if (equipment.quantity > equipment.minimumStock) {
+      await Alert.update(
+        { isRead: true, updatedBy: req.user.id },
+        { 
+          where: { 
+            equipmentId: equipment.id, 
+            type: 'low_stock', 
+            isRead: false 
+          } 
+        }
+      );
+    } else {
+      // check if stock is below minimum
       // avoid duplicate alerts — check if alert already exists
       const existingAlert = await Alert.findOne({
         where: { equipmentId: equipment.id, type: 'low_stock', isRead: false },
@@ -161,9 +173,8 @@ exports.deleteEquipment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Equipment not found' });
     }
 
-    // soft delete
-    await equipment.update({ deletedBy: req.user.id });
-    await equipment.destroy();
+    // hard delete — permanently removes from database
+    await equipment.destroy({ force: true });
 
     return res.json({ success: true, message: 'Equipment deleted successfully' });
   } catch (err) {

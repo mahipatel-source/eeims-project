@@ -115,9 +115,8 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // soft delete — sets deletedAt
-    await user.update({ deletedBy: req.user.id });
-    await user.destroy();
+    // hard delete — permanently removes from database
+    await user.destroy({ force: true });
 
     return res.json({ success: true, message: 'User deleted successfully' });
   } catch (err) {

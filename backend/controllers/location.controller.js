@@ -100,9 +100,8 @@ exports.deleteLocation = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Location not found' });
     }
 
-    // soft delete
-    await location.update({ deletedBy: req.user.id });
-    await location.destroy();
+    // hard delete — permanently removes from database
+    await location.destroy({ force: true });
 
     return res.json({ success: true, message: 'Location deleted successfully' });
   } catch (err) {
