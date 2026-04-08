@@ -6,6 +6,7 @@ import RoleRoute from './components/layout/RoleRoute';
 
 // auth pages
 import Login from './pages/auth/login/Index';
+import Register from './pages/auth/register/Index';
 
 // admin pages
 import AdminDashboard from './pages/admin/dashboard/Index';
@@ -24,12 +25,23 @@ import ManagerDashboard from './pages/manager/dashboard/Index';
 import IssuePart from './pages/manager/issue-part/Index';
 import IssueHistory from './pages/manager/issue-history/Index';
 import EquipmentView from './pages/manager/equipment-view/Index';
+import IssueEquipment from './pages/manager/issue-equipment/Index';
+import TrackReturns from './pages/manager/track-returns/Index';
+import MaintenanceTracking from './pages/manager/maintenance-tracking/Index';
 
 // technician pages
 import MySchedule from './pages/technician/my-schedule/Index';
 import LogMaintenance from './pages/technician/log-maintenance/Index';
 import ReportDamage from './pages/technician/report-damage/Index';
 import MaintenanceHistory from './pages/technician/maintenance-history/Index';
+
+// user pages
+import UserDashboard from './pages/user/dashboard/Index';
+import BrowseEquipment from './pages/user/browse-equipment/Index';
+import RequestEquipment from './pages/user/request-equipment/Index';
+import MyRequests from './pages/user/my-requests/Index';
+import MyHistory from './pages/user/my-history/Index';
+
 
 const App = () => {
   return (
@@ -38,38 +50,39 @@ const App = () => {
         <Toaster position="top-right" />
         <Routes>
           {/* public routes */}
+          <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/unauthorized" element={<div>Unauthorized Access</div>} />
 
           {/* admin routes */}
           <Route path="/admin/dashboard" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <AdminDashboard />
             </RoleRoute>
           } />
           <Route path="/admin/equipment" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <Equipment />
             </RoleRoute>
           } />
           <Route path="/admin/equipment/add" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <AddEquipment />
             </RoleRoute>
           } />
           <Route path="/admin/equipment/edit/:id" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <EditEquipment />
             </RoleRoute>
           } />
           <Route path="/admin/categories" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <Categories />
             </RoleRoute>
           } />
           <Route path="/admin/locations" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <Locations />
             </RoleRoute>
           } />
@@ -79,17 +92,17 @@ const App = () => {
             </RoleRoute>
           } />
           <Route path="/admin/alerts" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <Alerts />
             </RoleRoute>
           } />
           <Route path="/admin/maintenance" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <Maintenance />
             </RoleRoute>
           } />
           <Route path="/admin/reports" element={
-            <RoleRoute roles={['admin']}>
+            <RoleRoute roles={['admin', 'manager']}>
               <Reports />
             </RoleRoute>
           } />
@@ -115,6 +128,21 @@ const App = () => {
               <EquipmentView />
             </RoleRoute>
           } />
+          <Route path="/manager/issue-equipment" element={
+            <RoleRoute roles={['manager']}>
+              <IssueEquipment />
+            </RoleRoute>
+          } />
+          <Route path="/manager/track-returns" element={
+            <RoleRoute roles={['manager']}>
+              <TrackReturns />
+            </RoleRoute>
+          } />
+          <Route path="/manager/maintenance-tracking" element={
+            <RoleRoute roles={['manager']}>
+              <MaintenanceTracking />
+            </RoleRoute>
+          } />
 
           {/* technician routes */}
           <Route path="/technician/schedule" element={
@@ -135,6 +163,33 @@ const App = () => {
           <Route path="/technician/maintenance-history" element={
             <RoleRoute roles={['technician']}>
               <MaintenanceHistory />
+            </RoleRoute>
+          } />
+
+          {/* user routes */}
+          <Route path="/user/dashboard" element={
+            <RoleRoute roles={['user', 'employee']}>
+              <UserDashboard />
+            </RoleRoute>
+          } />
+          <Route path="/user/browse" element={
+            <RoleRoute roles={['user', 'employee']}>
+              <BrowseEquipment />
+            </RoleRoute>
+          } />
+          <Route path="/user/request/:id" element={
+            <RoleRoute roles={['user', 'employee']}>
+              <RequestEquipment />
+            </RoleRoute>
+          } />
+          <Route path="/user/my-requests" element={
+            <RoleRoute roles={['user', 'employee']}>
+              <MyRequests />
+            </RoleRoute>
+          } />
+          <Route path="/user/history" element={
+            <RoleRoute roles={['user', 'employee']}>
+              <MyHistory />
             </RoleRoute>
           } />
         </Routes>

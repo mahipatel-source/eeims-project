@@ -10,13 +10,13 @@ router.get('/', authenticate, categoryController.getAllCategories);
 // get single category — all roles
 router.get('/:id', authenticate, categoryController.getCategoryById);
 
-// create category — admin only
-router.post('/', authenticate, authorizeRoles('admin'), categoryController.createCategory);
+// create category — admin and manager
+router.post('/', authenticate, authorizeRoles('admin', 'manager'), categoryController.createCategory);
 
-// update category — admin only
-router.put('/:id', authenticate, authorizeRoles('admin'), categoryController.updateCategory);
+// update category — admin and manager
+router.put('/:id', authenticate, authorizeRoles('admin', 'manager'), categoryController.updateCategory);
 
-// delete category — admin only
-router.delete('/:id', authenticate, authorizeRoles('admin'), categoryController.deleteCategory);
+// delete category — admin and manager
+router.delete('/:id', authenticate, authorizeRoles('admin', 'manager'), categoryController.deleteCategory);
 
 module.exports = router;

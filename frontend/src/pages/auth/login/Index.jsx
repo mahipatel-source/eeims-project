@@ -31,9 +31,11 @@ const Login = () => {
         navigate('/manager/dashboard');
       } else if (user.role === 'technician') {
         navigate('/technician/schedule');
+      } else if (loggedInUser.role === 'employee') {
+      navigate('/user/dashboard');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      toast.error(error.response?.data?.message || error.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
@@ -170,9 +172,9 @@ const Login = () => {
           <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
             <p style={{ fontWeight: '500', marginBottom: '0.5rem' }}>Demo Accounts:</p>
             <p>Admin: admin@example.com</p>
-            <p>Manager: suresh@gmail.com</p>
-            <p>Technician: ashish@gmail.com</p>
-            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>Password: your_password</p>
+            <p>Manager: manager@example.com</p>
+            <p>Technician: technician@example.com</p>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>Password: password123</p>
           </div>
         </div>
       </div>

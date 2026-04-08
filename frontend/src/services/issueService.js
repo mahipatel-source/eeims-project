@@ -6,8 +6,18 @@ const issueService = {
     return response.data;
   },
 
+  getPending: async () => {
+    const response = await API.get('/issues/pending');
+    return response.data;
+  },
+
   getById: async (id) => {
     const response = await API.get(`/issues/${id}`);
+    return response.data;
+  },
+
+  getMyRequests: async () => {
+    const response = await API.get('/issues/my-requests');
     return response.data;
   },
 
@@ -16,18 +26,23 @@ const issueService = {
     return response.data;
   },
 
-  create: async (data) => {
-    const response = await API.post('/issues', data);
+  requestEquipment: async (data) => {
+    const response = await API.post('/issues/request', data);
     return response.data;
   },
 
-  return: async (id) => {
+  approve: async (id) => {
+    const response = await API.put(`/issues/${id}/approve`);
+    return response.data;
+  },
+
+  reject: async (id, reason) => {
+    const response = await API.put(`/issues/${id}/reject`, { rejectionReason: reason });
+    return response.data;
+  },
+
+  returnEquipment: async (id) => {
     const response = await API.put(`/issues/${id}/return`);
-    return response.data;
-  },
-
-  delete: async (id) => {
-    const response = await API.delete(`/issues/${id}`);
     return response.data;
   },
 };

@@ -13,13 +13,13 @@ router.get('/technician/:technicianId', authenticate, maintenanceController.getM
 // get single maintenance record
 router.get('/:id', authenticate, maintenanceController.getMaintenanceById);
 
-// create maintenance schedule — admin only
-router.post('/', authenticate, authorizeRoles('admin'), maintenanceController.createMaintenance);
+// create maintenance schedule — admin and manager
+router.post('/', authenticate, authorizeRoles('admin', 'manager'), maintenanceController.createMaintenance);
 
 // complete maintenance — technician
 router.put('/:id/complete', authenticate, authorizeRoles('admin', 'technician'), maintenanceController.completeMaintenance);
 
-// delete maintenance — admin only
-router.delete('/:id', authenticate, authorizeRoles('admin'), maintenanceController.deleteMaintenance);
+// delete maintenance — admin and manager
+router.delete('/:id', authenticate, authorizeRoles('admin', 'manager'), maintenanceController.deleteMaintenance);
 
 module.exports = router;

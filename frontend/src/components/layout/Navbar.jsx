@@ -27,7 +27,7 @@ const Navbar = () => {
           fontWeight: '600',
           color: '#111827'
         }}>
-          Admin Panel
+          {user?.role === 'manager' ? 'Manager Panel' : user?.role === 'technician' ? 'Technician Panel' : 'Admin Panel'}
         </h1>
       </div>
 

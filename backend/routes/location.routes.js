@@ -10,13 +10,13 @@ router.get('/', authenticate, locationController.getAllLocations);
 // get single location — all roles
 router.get('/:id', authenticate, locationController.getLocationById);
 
-// create location — admin only
-router.post('/', authenticate, authorizeRoles('admin'), locationController.createLocation);
+// create location — admin and manager
+router.post('/', authenticate, authorizeRoles('admin', 'manager'), locationController.createLocation);
 
-// update location — admin only
-router.put('/:id', authenticate, authorizeRoles('admin'), locationController.updateLocation);
+// update location — admin and manager
+router.put('/:id', authenticate, authorizeRoles('admin', 'manager'), locationController.updateLocation);
 
-// delete location — admin only
-router.delete('/:id', authenticate, authorizeRoles('admin'), locationController.deleteLocation);
+// delete location — admin and manager
+router.delete('/:id', authenticate, authorizeRoles('admin', 'manager'), locationController.deleteLocation);
 
 module.exports = router;

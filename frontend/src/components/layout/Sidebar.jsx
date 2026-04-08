@@ -5,7 +5,19 @@ const Sidebar = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
 
-  const menuItems = [
+  const menuItems = user?.role === 'manager' ? [
+{ path: '/manager/dashboard', label: 'Dashboard', icon: '📊' },
+
+    { path: '/manager/equipment', label: 'Equipment', icon: '📦' },
+    { path: '/manager/issue-part', label: 'Pending Requests', icon: '📩' },
+    { path: '/manager/issue-history', label: 'Request History', icon: '🕘' },
+    { path: '/manager/issue-equipment', label: 'Issue Equipment', icon: '📤' },
+    { path: '/manager/track-returns', label: 'Return Equipment', icon: '↩️' },
+    { path: '/manager/maintenance-tracking', label: 'Maintenance', icon: '🔧' },
+    { path: '/admin/categories', label: 'Categories', icon: '🏷️' },
+    { path: '/admin/locations', label: 'Locations', icon: '📍' },
+    { path: '/admin/reports', label: 'Reports', icon: '📋' },
+  ] : [
     { path: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/admin/equipment', label: 'Equipment', icon: '📦' },
     { path: '/admin/categories', label: 'Categories', icon: '🏷️' },
@@ -18,26 +30,31 @@ const Sidebar = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  return (
-    <div style={{
-      width: '250px',
-      height: '100vh',
-      backgroundColor: 'var(--white)',
-      borderRight: '1px solid var(--border)',
-      position: 'fixed',
-      left: 0,
-      top: 0,
-      overflowY: 'auto'
-    }}>
-      {/* Logo/Brand */}
+ return (
+  <div style={{
+    width: '250px',
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: 'var(--white)',
+    borderRight: '1px solid var(--border)',
+    position: 'fixed',
+    left: 0,
+    top: 0
+  }}>
+
+    {/* Top Section (Scrollable) */}
+    <div style={{ flex: 1, overflowY: 'auto' }}>
+
+      {/* Logo */}
       <div style={{
         padding: '1.5rem',
         borderBottom: '1px solid var(--border)',
         backgroundColor: 'var(--primary)',
         color: 'white'
       }}>
-        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>EEIMS</h2>
-        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem', opacity: 0.9 }}>
+        <h2 style={{ margin: 0 }}>EEIMS</h2>
+        <p style={{ margin: 0, fontSize: '0.8rem' }}>
           Equipment Management
         </p>
       </div>
@@ -57,23 +74,20 @@ const Sidebar = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontWeight: '600'
+            color: 'white'
           }}>
             {user?.name?.charAt(0)?.toUpperCase() || 'A'}
           </div>
           <div>
-            <p style={{ margin: 0, fontWeight: '500', fontSize: '0.875rem' }}>
-              {user?.name || 'Admin User'}
-            </p>
-            <p style={{ margin: '0.125rem 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
-              {user?.role || 'admin'}
+            <p style={{ margin: 0 }}>{user?.name}</p>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: '#6b7280' }}>
+              {user?.role}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Navigation Menu */}
+      {/* Menu */}
       <nav style={{ padding: '1rem 0' }}>
         {menuItems.map((item) => (
           <Link
@@ -87,49 +101,42 @@ const Sidebar = () => {
               textDecoration: 'none',
               color: isActive(item.path) ? 'var(--primary)' : '#374151',
               backgroundColor: isActive(item.path) ? 'rgba(37, 99, 235, 0.1)' : 'transparent',
-              borderRight: isActive(item.path) ? '3px solid var(--primary)' : '3px solid transparent',
+              borderRight: isActive(item.path) ? '3px solid var(--primary)' : 'transparent',
               fontWeight: isActive(item.path) ? '600' : '500',
-              transition: 'all 0.2s ease'
             }}
           >
-            <span style={{ fontSize: '1.125rem' }}>{item.icon}</span>
-            <span style={{ fontSize: '0.875rem' }}>{item.label}</span>
+            <span>{item.icon}</span>
+            <span>{item.label}</span>
           </Link>
         ))}
       </nav>
 
-      {/* Logout Button */}
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: '1rem 1.5rem',
-        borderTop: '1px solid var(--border)'
-      }}>
-        <button
-          onClick={logout}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#dc2626',
-            color: 'white',
-            border: 'none',
-            borderRadius: 'var(--radius)',
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            transition: 'background-color 0.2s ease'
-          }}
-        >
-          🚪 Logout
-        </button>
-      </div>
     </div>
+
+    {/* Bottom Logout (Fixed Properly) */}
+    <div style={{
+      padding: '1rem 1.5rem',
+      borderTop: '1px solid var(--border)',
+      background: '#fff'
+    }}>
+      <button
+        onClick={logout}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#dc2626',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          fontWeight: '600'
+        }}
+      >
+        🚪 Logout
+      </button>
+    </div>
+
+  </div>
   );
 };
 

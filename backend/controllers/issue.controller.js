@@ -17,6 +17,24 @@ exports.getAllIssues = async (req, res) => {
   }
 };
 
+// get pending requests — admin and manager
+exports.getPendingRequests = async (req, res) => {
+  try {
+    const requests = await Issue.findAll({
+      where: { status: 'pending' },
+      include: [
+        { model: Equipment, attributes: ['id', 'name', 'quantity'] },
+        { model: User, attributes: ['id', 'name', 'email'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    return res.json({ success: true, data: requests });
+  } catch (err) {
+    console.error('Get pending requests error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch pending requests' });
+  }
+};
+
 // get single issue by id
 exports.getIssueById = async (req, res) => {
   try {
@@ -38,14 +56,14 @@ exports.getIssueById = async (req, res) => {
   }
 };
 
-// create new issue — admin and manager
-exports.createIssue = async (req, res) => {
+// user requests equipment
+exports.requestEquipment = async (req, res) => {
   try {
-    const { equipmentId, userId, quantity, remarks, returnDate } = req.body;
+    const { equipmentId, quantity, remarks, requestedReturnDate } = req.body;
 
     // validate required fields
-    if (!equipmentId || !userId || !quantity) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    if (!equipmentId || !quantity) {
+      return res.status(400).json({ success: false, message: 'Equipment and quantity are required' });
     }
 
     // check if equipment exists
@@ -62,55 +80,126 @@ exports.createIssue = async (req, res) => {
       });
     }
 
-    // create issue record
+    // create request with pending status
     const issue = await Issue.create({
       equipmentId,
-      userId,
+      userId: req.user.id,
       quantity,
       remarks,
-      returnDate: returnDate || null,
-      issueDate: new Date(),
-      status: 'issued',
+      requestedReturnDate: requestedReturnDate || null,
+      status: 'pending',
       createdBy: req.user.id,
+      updatedBy: req.user.id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Equipment request submitted successfully',
+      data: issue,
+    });
+  } catch (err) {
+    console.error('Request equipment error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to submit request' });
+  }
+};
+
+// approve request — admin and manager
+exports.approveRequest = async (req, res) => {
+  try {
+    const issue = await Issue.findByPk(req.params.id);
+
+    if (!issue) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (issue.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request is not pending' });
+    }
+
+    // check stock again before approving
+    const equipment = await Equipment.findByPk(issue.equipmentId);
+    if (equipment.quantity < issue.quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Not enough stock — only ${equipment.quantity} units available`,
+      });
+    }
+
+    // approve and issue equipment
+    await issue.update({
+      status: 'issued',
+      issueDate: new Date(),
       updatedBy: req.user.id,
     });
 
     // reduce equipment quantity
     await equipment.update({
-      quantity: equipment.quantity - quantity,
+      quantity: equipment.quantity - issue.quantity,
       updatedBy: req.user.id,
     });
 
-    // create low stock alert if quantity dropped below minimum
-    if (equipment.quantity - quantity <= equipment.minimumStock) {
+    // create low stock alert if needed
+    if (equipment.quantity - issue.quantity <= equipment.minimumStock) {
       const { Alert } = require('../models');
       const existingAlert = await Alert.findOne({
-        where: { equipmentId, type: 'low_stock', isRead: false },
+        where: { equipmentId: equipment.id, type: 'low_stock', isRead: false },
       });
 
       if (!existingAlert) {
         await Alert.create({
           type: 'low_stock',
-          message: `Low stock alert: ${equipment.name} has only ${equipment.quantity - quantity} units remaining`,
-          equipmentId,
+          message: `Low stock alert: ${equipment.name} has only ${equipment.quantity - issue.quantity} units remaining`,
+          equipmentId: equipment.id,
           createdBy: req.user.id,
           updatedBy: req.user.id,
         });
       }
     }
 
-    return res.status(201).json({
+    return res.json({
       success: true,
-      message: 'Issue created successfully',
+      message: 'Request approved successfully',
       data: issue,
     });
   } catch (err) {
-    console.error('Create issue error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to create issue' });
+    console.error('Approve request error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to approve request' });
   }
 };
 
-// return issued equipment
+// reject request — admin and manager
+exports.rejectRequest = async (req, res) => {
+  try {
+    const issue = await Issue.findByPk(req.params.id);
+
+    if (!issue) {
+      return res.status(404).json({ success: false, message: 'Request not found' });
+    }
+
+    if (issue.status !== 'pending') {
+      return res.status(400).json({ success: false, message: 'Request is not pending' });
+    }
+
+    const { rejectionReason } = req.body;
+
+    await issue.update({
+      status: 'rejected',
+      rejectionReason: rejectionReason || 'No reason provided',
+      updatedBy: req.user.id,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Request rejected',
+      data: issue,
+    });
+  } catch (err) {
+    console.error('Reject request error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to reject request' });
+  }
+};
+
+// return issued equipment — user
 exports.returnIssue = async (req, res) => {
   try {
     const issue = await Issue.findByPk(req.params.id);
@@ -119,12 +208,15 @@ exports.returnIssue = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Issue not found' });
     }
 
-    // check if already returned
-    if (issue.status === 'returned') {
-      return res.status(400).json({ success: false, message: 'Equipment already returned' });
+    if (issue.status !== 'issued') {
+      return res.status(400).json({ success: false, message: 'Equipment is not currently issued' });
     }
 
-    // update issue status
+    // only the user who requested can return
+    if (issue.userId !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'manager') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
     await issue.update({
       status: 'returned',
       returnDate: new Date(),
@@ -138,14 +230,36 @@ exports.returnIssue = async (req, res) => {
       updatedBy: req.user.id,
     });
 
-    return res.json({ success: true, message: 'Equipment returned successfully', data: issue });
+    return res.json({
+      success: true,
+      message: 'Equipment returned successfully',
+      data: issue,
+    });
   } catch (err) {
     console.error('Return issue error:', err);
     return res.status(500).json({ success: false, message: 'Failed to return equipment' });
   }
 };
 
-// get issues by user id
+// get my requests — logged in user
+exports.getMyRequests = async (req, res) => {
+  try {
+    const issues = await Issue.findAll({
+      where: { userId: req.user.id },
+      include: [
+        { model: Equipment, attributes: ['id', 'name', 'condition'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    return res.json({ success: true, data: issues });
+  } catch (err) {
+    console.error('Get my requests error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch requests' });
+  }
+};
+
+// get issues by user id — admin and manager
 exports.getIssuesByUser = async (req, res) => {
   try {
     const issues = await Issue.findAll({

@@ -57,18 +57,18 @@ const PORT = process.env.PORT || 5000;
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Database connected successfully');
-    return sequelize.sync({ alter: true });
+    return sequelize.sync();
   })
   .then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
 
-    // start cron jobs
-    startLowStockChecker();
-    startMaintenanceChecker();
-    console.log('⏰ Cron jobs started');
-  });
-})
+      // start cron jobs
+      startLowStockChecker();
+      startMaintenanceChecker();
+      console.log('⏰ Cron jobs started');
+    });
+  })
   .catch((err) => {
     console.error('❌ Database connection failed:', err);
   });

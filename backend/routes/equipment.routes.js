@@ -7,19 +7,19 @@ const { authorizeRoles } = require('../middleware/role.middleware');
 // get all equipment — all roles can view
 router.get('/', authenticate, equipmentController.getAllEquipment);
 
-// get low stock equipment — admin only
-router.get('/low-stock', authenticate, authorizeRoles('admin'), equipmentController.getLowStockEquipment);
+// get low stock equipment — admin and manager
+router.get('/low-stock', authenticate, authorizeRoles('admin', 'manager'), equipmentController.getLowStockEquipment);
 
 // get single equipment — all roles
 router.get('/:id', authenticate, equipmentController.getEquipmentById);
 
-// create equipment — admin only
-router.post('/', authenticate, authorizeRoles('admin'), equipmentController.createEquipment);
+// create equipment — admin and manager
+router.post('/', authenticate, authorizeRoles('admin', 'manager'), equipmentController.createEquipment);
 
-// update equipment — admin only
-router.put('/:id', authenticate, authorizeRoles('admin'), equipmentController.updateEquipment);
+// update equipment — admin and manager
+router.put('/:id', authenticate, authorizeRoles('admin', 'manager'), equipmentController.updateEquipment);
 
-// delete equipment — admin only
-router.delete('/:id', authenticate, authorizeRoles('admin'), equipmentController.deleteEquipment);
+// delete equipment — admin and manager
+router.delete('/:id', authenticate, authorizeRoles('admin', 'manager'), equipmentController.deleteEquipment);
 
 module.exports = router;

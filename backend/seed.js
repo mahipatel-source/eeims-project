@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const db = require('./models');
 const { User, Equipment, Category, Location, Maintenance, Alert, Issue } = require('./models');
 
@@ -29,6 +30,28 @@ async function seedDatabase() {
       { name: 'Warehouse', description: 'Equipment storage warehouse' }
     ]);
     console.log('✅ Created 4 locations');
+
+    // Get admin user (created during setup)
+    let admin = await User.findOne({ where: { email: 'admin@example.com' } });
+    if (!admin) {
+      admin = await User.create({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        password: await bcrypt.hash('password123', 10),
+        role: 'admin'
+      });
+    }
+
+    // Get manager user (created during setup)
+    let manager = await User.findOne({ where: { email: 'manager@example.com' } });
+    if (!manager) {
+      manager = await User.create({
+        name: 'Manager User',
+        email: 'manager@example.com',
+        password: await bcrypt.hash('password123', 10),
+        role: 'manager'
+      });
+    }
 
     // Get technician user (created during setup)
     let technician = await User.findOne({ where: { email: 'technician@example.com' } });
