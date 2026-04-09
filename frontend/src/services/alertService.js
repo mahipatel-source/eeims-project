@@ -25,6 +25,11 @@ const alertService = {
     const response = await API.delete(`/alerts/${id}`);
     return response.data;
   },
+
+  reportDamage: async (data) => {
+    const response = await API.post('/alerts/report-damage', data);
+    return response.data;
+  },
 };
 
 export default alertService;

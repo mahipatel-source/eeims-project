@@ -70,13 +70,11 @@ const IssueEquipment = () => {
     setSubmitting(true);
 
     try {
-      const response = await issueService.create({
+      await issueService.directIssue({
         equipmentId: form.equipmentId,
         userId: form.userId,
         quantity: Number(form.quantity),
         remarks: form.remarks,
-        returnDate: form.returnDate || null,
-        status: 'issued',
       });
 
       toast.success('Equipment issued successfully');

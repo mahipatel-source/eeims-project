@@ -4,7 +4,7 @@ const sequelize = require('../config/db');
 const Issue = sequelize.define('Issue', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   equipmentId: { type: DataTypes.INTEGER, allowNull: false },
-  userId: { type: DataTypes.INTEGER, allowNull: false },
+  userId: { type: DataTypes.INTEGER, allowNull: true },
   issueDate: { type: DataTypes.DATE, allowNull: true },
   returnDate: { type: DataTypes.DATE },
   status: {
@@ -13,6 +13,7 @@ const Issue = sequelize.define('Issue', {
     defaultValue: 'pending',
   },
   quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+  requestedReturnDate: { type: DataTypes.DATE },
   remarks: { type: DataTypes.TEXT },
   createdBy: { type: DataTypes.INTEGER, allowNull: true },
   updatedBy: { type: DataTypes.INTEGER, allowNull: true },

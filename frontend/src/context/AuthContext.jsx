@@ -4,7 +4,10 @@ import authService from '../services/authService';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
 
@@ -12,12 +15,20 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadUser = async () => {
       const savedToken = localStorage.getItem('token');
-      if (savedToken) {
+      const savedUser = localStorage.getItem('user');
+      
+      if (savedToken && savedUser) {
+        // First set user from localStorage immediately to prevent flash
+        setUser(JSON.parse(savedUser));
+        setToken(savedToken);
+        
+        // Then verify with server
         try {
           const response = await authService.getMe();
-          setUser(response.data);
+          setUser(response.data.data);
+          localStorage.setItem('user', JSON.stringify(response.data.data));
         } catch (err) {
-          // token expired or invalid
+          console.log('Token validation failed, clearing session');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setUser(null);
@@ -47,7 +58,8 @@ export const AuthProvider = ({ children }) => {
 
   // logout function
   const logout = () => {
-    authService.logout();
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     setToken(null);
   };

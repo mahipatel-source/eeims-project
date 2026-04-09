@@ -16,6 +16,7 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const reportRoutes = require('./routes/report.routes');
 const startLowStockChecker = require('./utils/lowStockChecker');
 const startMaintenanceChecker = require('./utils/maintenanceChecker');
+const seedAdmin = require('./utils/seeder');
 
 // error middleware
 const errorMiddleware = require('./middleware/error.middleware');
@@ -67,6 +68,9 @@ sequelize.authenticate()
       startLowStockChecker();
       startMaintenanceChecker();
       console.log('⏰ Cron jobs started');
+
+      // seed admin if not exists
+      seedAdmin();
     });
   })
   .catch((err) => {

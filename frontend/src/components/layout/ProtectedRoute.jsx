@@ -1,15 +1,24 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import Loader from '../ui/Loader';
 
 const ProtectedRoute = ({ children }) => {
   const { user, isLoading } = useAuth();
 
-  // show nothing while checking auth
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: '#f3f4f6'
+      }}>
+        <Loader text="Loading..." />
+      </div>
+    );
   }
 
-  // redirect to login if not logged in
   if (!user) {
     return <Navigate to="/login" replace />;
   }

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 const IssuePart = () => {
   const [requests, setRequests] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('requested');
+  const [filterStatus, setFilterStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -40,8 +40,9 @@ const IssuePart = () => {
 
   const getStatusLabel = (status) => {
     const map = {
-      requested: { label: 'Requested', bg: '#fef3c7', color: '#92400e' },
-      issued: { label: 'Issued', bg: '#dcfce7', color: '#166534' },
+      pending: { label: 'Pending', bg: '#fef3c7', color: '#92400e' },
+      approved: { label: 'Approved', bg: '#dcfce7', color: '#166534' },
+      issued: { label: 'Issued', bg: '#dbeafe', color: '#0c4a6e' },
       returned: { label: 'Returned', bg: '#dbeafe', color: '#0c4a6e' },
       rejected: { label: 'Rejected', bg: '#fee2e2', color: '#991b1b' },
     };
@@ -104,7 +105,8 @@ const IssuePart = () => {
               style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '0.95rem' }}
             >
               <option value="">All statuses</option>
-              <option value="requested">Requested</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
               <option value="issued">Issued</option>
               <option value="returned">Returned</option>
               <option value="rejected">Rejected</option>
@@ -152,7 +154,7 @@ const IssuePart = () => {
                     <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>{request.returnDate ? new Date(request.returnDate).toLocaleDateString() : '—'}</td>
                     <td style={{ padding: '1rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {request.status === 'requested' && (
+                        {request.status === 'pending' && (
                           <>
                             <button
                               onClick={() => handleApprove(request.id)}
@@ -170,7 +172,7 @@ const IssuePart = () => {
                             </button>
                           </>
                         )}
-                        {request.status !== 'requested' && <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>No actions</span>}
+                        {request.status !== 'pending' && <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>No actions</span>}
                       </div>
                     </td>
                   </tr>

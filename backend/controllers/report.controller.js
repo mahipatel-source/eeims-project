@@ -96,7 +96,7 @@ exports.getLowStockReport = async (req, res) => {
     const lowStock = await Equipment.findAll({
       where: sequelize.where(
         sequelize.col('quantity'),
-        { [Op.lte]: sequelize.col('minimumStock') }
+        { [Op.lt]: sequelize.col('minimumStock') }
       ),
       include: [
         { model: Category, attributes: ['name'] },

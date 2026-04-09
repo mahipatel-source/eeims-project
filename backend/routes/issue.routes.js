@@ -22,6 +22,9 @@ router.get('/:id', authenticate, issueController.getIssueById);
 // user requests equipment
 router.post('/request', authenticate, issueController.requestEquipment);
 
+// manager directly issues equipment without approval
+router.post('/direct', authenticate, authorizeRoles('admin', 'manager'), issueController.directIssue);
+
 // approve request — admin and manager
 router.put('/:id/approve', authenticate, authorizeRoles('admin', 'manager'), issueController.approveRequest);
 

@@ -17,7 +17,14 @@ exports.getAllUsers = async (req, res) => {
 // get single user by id
 exports.getUserById = async (req, res) => {
   try {
-    const user = await User.findByPk(req.params.id, {
+    const requestedId = parseInt(req.params.id);
+    
+    // non-admin users can only view their own profile
+    if (req.user.role !== 'admin' && req.user.id !== requestedId) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const user = await User.findByPk(requestedId, {
       attributes: ['id', 'name', 'email', 'role', 'createdAt'],
     });
 
@@ -115,7 +122,21 @@ exports.deleteUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // hard delete — permanently removes from database
+    // First, set userId to null in related issues (soft approach)
+    const { Issue } = require('../models');
+    await Issue.update(
+      { userId: null },
+      { where: { userId: user.id } }
+    );
+
+    // Also set technicianId to null in related maintenance
+    const { Maintenance } = require('../models');
+    await Maintenance.update(
+      { technicianId: null },
+      { where: { technicianId: user.id } }
+    );
+
+    // Now hard delete the user
     await user.destroy({ force: true });
 
     return res.json({ success: true, message: 'User deleted successfully' });

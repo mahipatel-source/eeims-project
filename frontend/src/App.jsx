@@ -168,27 +168,27 @@ const App = () => {
 
           {/* user routes */}
           <Route path="/user/dashboard" element={
-            <RoleRoute roles={['user', 'employee']}>
+            <RoleRoute roles={['employee']}>
               <UserDashboard />
             </RoleRoute>
           } />
           <Route path="/user/browse" element={
-            <RoleRoute roles={['user', 'employee']}>
+            <RoleRoute roles={['employee']}>
               <BrowseEquipment />
             </RoleRoute>
           } />
           <Route path="/user/request/:id" element={
-            <RoleRoute roles={['user', 'employee']}>
+            <RoleRoute roles={['employee']}>
               <RequestEquipment />
             </RoleRoute>
           } />
           <Route path="/user/my-requests" element={
-            <RoleRoute roles={['user', 'employee']}>
+            <RoleRoute roles={['employee']}>
               <MyRequests />
             </RoleRoute>
           } />
           <Route path="/user/history" element={
-            <RoleRoute roles={['user', 'employee']}>
+            <RoleRoute roles={['employee']}>
               <MyHistory />
             </RoleRoute>
           } />

@@ -4,19 +4,19 @@ const locationController = require('../controllers/location.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { authorizeRoles } = require('../middleware/role.middleware');
 
-// get all locations — all roles
+// get all locations — all authenticated roles
 router.get('/', authenticate, locationController.getAllLocations);
 
-// get single location — all roles
+// get single location — all authenticated roles
 router.get('/:id', authenticate, locationController.getLocationById);
 
-// create location — admin and manager
-router.post('/', authenticate, authorizeRoles('admin', 'manager'), locationController.createLocation);
+// create location — admin only
+router.post('/', authenticate, authorizeRoles('admin'), locationController.createLocation);
 
-// update location — admin and manager
-router.put('/:id', authenticate, authorizeRoles('admin', 'manager'), locationController.updateLocation);
+// update location — admin only
+router.put('/:id', authenticate, authorizeRoles('admin'), locationController.updateLocation);
 
-// delete location — admin and manager
-router.delete('/:id', authenticate, authorizeRoles('admin', 'manager'), locationController.deleteLocation);
+// delete location — admin only (hard delete)
+router.delete('/:id', authenticate, authorizeRoles('admin'), locationController.deleteLocation);
 
 module.exports = router;

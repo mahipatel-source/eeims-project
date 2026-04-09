@@ -115,6 +115,11 @@ exports.completeMaintenance = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Maintenance already completed' });
     }
 
+    // non-admin users can only complete their own assigned tasks
+    if (req.user.role !== 'admin' && record.technicianId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
     const { notes } = req.body;
 
     await record.update({

@@ -16,7 +16,10 @@ router.put('/mark-all-read', authenticate, authorizeRoles('admin', 'manager'), a
 // mark single alert as read — admin and manager
 router.put('/:id/read', authenticate, authorizeRoles('admin', 'manager'), alertController.markAsRead);
 
-// delete alert — admin and manager
-router.delete('/:id', authenticate, authorizeRoles('admin', 'manager'), alertController.deleteAlert);
+// delete alert — admin only
+router.delete('/:id', authenticate, authorizeRoles('admin'), alertController.deleteAlert);
+
+// report damage — admin and technician
+router.post('/report-damage', authenticate, authorizeRoles('admin', 'technician'), alertController.reportDamage);
 
 module.exports = router;

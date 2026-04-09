@@ -1,9 +1,9 @@
-const Input = ({
+const Select = ({
   label,
-  type = 'text',
   value,
   onChange,
-  placeholder,
+  options = [],
+  placeholder = 'Select an option',
   required = false,
   error,
   disabled = false,
@@ -27,13 +27,11 @@ const Input = ({
           {label} {required && <span style={{ color: '#dc2626' }}>*</span>}
         </label>
       )}
-      <input
-        type={type}
+      <select
         name={name}
         id={id || name}
         value={value}
         onChange={onChange}
-        placeholder={placeholder}
         required={required}
         disabled={disabled}
         style={{
@@ -46,9 +44,17 @@ const Input = ({
           color: '#111827',
           outline: 'none',
           transition: 'border-color 0.15s',
+          cursor: 'pointer',
           ...style
         }}
-      />
+      >
+        <option value="">{placeholder}</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
       {error && (
         <p style={{
           margin: '0.25rem 0 0',
@@ -62,4 +68,4 @@ const Input = ({
   );
 };
 
-export default Input;
+export default Select;

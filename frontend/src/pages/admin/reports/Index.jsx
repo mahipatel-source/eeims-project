@@ -39,7 +39,7 @@ const Reports = () => {
       console.log('Issues Response:', issuesRes);
 
       const inventory = inventoryRes.data || inventoryRes || [];
-      const lowStockItems = inventory.filter(item => item.quantity < item.minimumStock);
+      const lowStockItems = inventory.filter(item => item.quantity <= item.minimumStock);
       const maintenance = maintenanceRes.data || maintenanceRes || [];
       const issues = issuesRes.data || issuesRes || [];
 
@@ -159,10 +159,10 @@ const Reports = () => {
                     borderRadius: '0.25rem',
                     fontSize: '0.75rem',
                     fontWeight: '600',
-                    backgroundColor: item.quantity >= item.minimumStock ? '#dbeafe' : '#fee2e2',
-                    color: item.quantity >= item.minimumStock ? '#0c4a6e' : '#7f1d1d'
+                    backgroundColor: item.quantity > item.minimumStock ? '#dbeafe' : '#fee2e2',
+                    color: item.quantity > item.minimumStock ? '#0c4a6e' : '#7f1d1d'
                   }}>
-                    {item.quantity >= item.minimumStock ? 'In Stock' : 'Low Stock'}
+                    {item.quantity > item.minimumStock ? 'In Stock' : 'Low Stock'}
                   </span>
                 </td>
                 <td style={{ padding: '1rem', textAlign: 'center' }}>
@@ -407,23 +407,23 @@ const Reports = () => {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ backgroundColor: 'var(--light)' }}>
-            <tr>
-              <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Description</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Severity</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Date Reported</th>
-            </tr>
+              <tr>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment</th>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Remarks</th>
+                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Quantity</th>
+                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
+                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>User</th>
+              </tr>
           </thead>
           <tbody>
             {filteredIssues.length > 0 ? (
               filteredIssues.map(item => (
                 <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '1rem', color: '#111827', fontWeight: '500' }}>
-                    {reportData.inventory.find(eq => eq.id === item.equipmentId)?.name}
+                    {item.Equipment?.name || `Equipment #${item.equipmentId}`}
                   </td>
                   <td style={{ padding: '1rem', color: '#6b7280', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.description}
+                    {item.remarks || '-'}
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'center' }}>
                     <span style={{
@@ -431,10 +431,10 @@ const Reports = () => {
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',
                       fontWeight: '600',
-                      backgroundColor: item.severity === 'high' ? '#fee2e2' : item.severity === 'medium' ? '#fef3c7' : '#dbeafe',
-                      color: item.severity === 'high' ? '#7f1d1d' : item.severity === 'medium' ? '#92400e' : '#0c4a6e'
+                      backgroundColor: item.quantity > 1 ? '#fee2e2' : '#dbeafe',
+                      color: item.quantity > 1 ? '#7f1d1d' : '#0c4a6e'
                     }}>
-                      {item.severity?.charAt(0).toUpperCase() + item.severity?.slice(1)}
+                      Qty: {item.quantity}
                     </span>
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'center' }}>
@@ -443,14 +443,14 @@ const Reports = () => {
                       borderRadius: '0.25rem',
                       fontSize: '0.75rem',
                       fontWeight: '600',
-                      backgroundColor: item.status === 'resolved' ? '#dcfce7' : '#dbeafe',
-                      color: item.status === 'resolved' ? '#15803d' : '#0c4a6e'
+                      backgroundColor: item.status === 'returned' ? '#dcfce7' : item.status === 'pending' ? '#fef3c7' : item.status === 'issued' ? '#dbeafe' : item.status === 'rejected' ? '#fee2e2' : '#e5e7eb',
+                      color: item.status === 'returned' ? '#15803d' : item.status === 'pending' ? '#92400e' : item.status === 'issued' ? '#0c4a6e' : item.status === 'rejected' ? '#991b1b' : '#374151'
                     }}>
                       {item.status?.charAt(0).toUpperCase() + item.status?.slice(1)}
                     </span>
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                    {new Date(item.createdAt).toLocaleDateString()}
+                    {item.User?.name || '-'}
                   </td>
                 </tr>
               ))

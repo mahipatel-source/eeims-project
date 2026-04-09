@@ -78,3 +78,37 @@ exports.deleteAlert = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to delete alert' });
   }
 };
+
+// report damage — admin and technician
+exports.reportDamage = async (req, res) => {
+  try {
+    const { equipmentId, message } = req.body;
+
+    if (!equipmentId || !message) {
+      return res.status(400).json({ success: false, message: 'Equipment and description are required' });
+    }
+
+    const equipment = await Equipment.findByPk(equipmentId);
+    if (!equipment) {
+      return res.status(404).json({ success: false, message: 'Equipment not found' });
+    }
+
+    const alert = await Alert.create({
+      type: 'general',
+      message: `Damage reported: ${message}`,
+      equipmentId,
+      isRead: false,
+      createdBy: req.user.id,
+      updatedBy: req.user.id,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Damage reported successfully',
+      data: alert,
+    });
+  } catch (err) {
+    console.error('Report damage error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to report damage' });
+  }
+};

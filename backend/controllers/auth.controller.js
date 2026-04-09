@@ -20,7 +20,8 @@ exports.register = async (req, res) => {
 
     // hash password before saving
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed, role: role || 'manager' });
+    // always set role to employee for self-registration
+    const user = await User.create({ name, email, password: hashed, role: 'employee' });
 
     return res.status(201).json({
       success: true,

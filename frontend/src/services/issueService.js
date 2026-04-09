@@ -31,6 +31,11 @@ const issueService = {
     return response.data;
   },
 
+  directIssue: async (data) => {
+    const response = await API.post('/issues/direct', data);
+    return response.data;
+  },
+
   approve: async (id) => {
     const response = await API.put(`/issues/${id}/approve`);
     return response.data;
