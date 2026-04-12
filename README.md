@@ -639,6 +639,95 @@ VITE_API_URL=http://localhost:5000/api
 
 ---
 
+## Office PC Setup Guide
+
+### Prerequisites (Office PC must have)
+1. **Node.js** - Download from https://nodejs.org (v18+)
+2. **MySQL** - Ensure MySQL service is running
+3. **Database** - Create database `eeims_db`
+
+### Database Setup (Run in MySQL)
+```sql
+CREATE DATABASE eeims_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+### Quick Start (Office PC)
+
+#### 1. Clone Project
+```bash
+git clone <your-repo-url>
+cd eeims-project
+```
+
+#### 2. Configure Backend
+Create/edit `backend/.env`:
+```env
+PORT=5001
+DB_HOST=localhost
+DB_USER=root
+DB_PASS=root123
+DB_NAME=eeims_db
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=12h
+ADMIN_EMAIL=admin@eeims.com
+ADMIN_PASSWORD=Admin@123
+```
+
+#### 3. Configure Frontend
+Create/edit `frontend/.env`:
+```env
+VITE_API_URL=http://localhost:5001/api
+```
+
+#### 4. Install & Run
+```bash
+# Terminal 1 - Backend
+cd backend
+npm install
+npm start
+
+# Terminal 2 - Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+#### 5. Access
+- **Frontend:** http://localhost:5173
+- **Backend API:** http://localhost:5001/api
+
+### Login Credentials
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@eeims.com | Admin@123 |
+
+### If Project Already Exists (Don't Clone Fresh)
+```bash
+# Just update credentials in backend/.env
+DB_USER=your_office_db_user
+DB_PASS=your_office_db_password
+
+# Then run
+cd backend
+npm start
+
+# New terminal
+cd frontend
+npm run dev
+```
+
+### Troubleshooting Office PC Issues
+
+| Issue | Solution |
+|-------|----------|
+| Login not working | Check MySQL is running |
+| 403 Forbidden errors | Restart backend after recent code changes |
+| Database connection error | Verify DB_USER and DB_PASS in .env |
+| Port already in use | Change PORT=5002 in backend/.env |
+| Old data showing | Clear browser localStorage and re-login |
+
+---
+
 ## License
 
 This project is for educational and internal use purposes.

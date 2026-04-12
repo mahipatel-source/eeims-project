@@ -121,23 +121,6 @@ const Login = () => {
           </div>
         </div>
         
-        <div style={styles.statsSection}>
-          <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>Easy</span>
-            <span style={styles.statsLabel}>To Use</span>
-          </div>
-          <div style={styles.statsDivider}></div>
-          <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>Fast</span>
-            <span style={styles.statsLabel}>Approval</span>
-          </div>
-          <div style={styles.statsDivider}></div>
-          <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>Full</span>
-            <span style={styles.statsLabel}>History</span>
-          </div>
-        </div>
-
         <div style={styles.wavePattern}></div>
       </div>
 
@@ -345,41 +328,6 @@ const styles = {
   },
   featureText: {
     fontWeight: 500,
-  },
-  statsSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '2rem',
-    marginTop: '3rem',
-    padding: '1.25rem 2rem',
-    background: 'rgba(255,255,255,0.15)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.2)',
-    position: 'relative',
-    zIndex: 2,
-  },
-  statsItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.25rem',
-  },
-  statsNumber: {
-    fontSize: '1.25rem',
-    fontWeight: '800',
-    color: 'white',
-  },
-  statsLabel: {
-    fontSize: '0.75rem',
-    opacity: 0.8,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  statsDivider: {
-    width: '1px',
-    height: '32px',
-    background: 'rgba(255,255,255,0.3)',
   },
   wavePattern: {
     position: 'absolute',

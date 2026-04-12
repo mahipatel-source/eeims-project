@@ -171,23 +171,6 @@ const StaffLogin = () => {
           </div>
         </div>
         
-        <div style={styles.statsSection}>
-          <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>4 Roles</span>
-            <span style={styles.statsLabel}>Available</span>
-          </div>
-          <div style={styles.statsDivider}></div>
-          <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>100%</span>
-            <span style={styles.statsLabel}>Secure</span>
-          </div>
-          <div style={styles.statsDivider}></div>
-          <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>24/7</span>
-            <span style={styles.statsLabel}>Active</span>
-          </div>
-        </div>
-
         <div style={styles.wavePattern}></div>
       </div>
 
@@ -331,27 +314,6 @@ const StaffLogin = () => {
             <span style={styles.employeeText}>Employee? </span>
             <Link to="/login" style={styles.employeeLinkText}>Sign in here →</Link>
           </div>
-
-          <div style={styles.demoSection}>
-            <p style={styles.demoTitle}>Staff Credentials</p>
-            <div style={styles.credentialsList}>
-              <div style={styles.credentialItem}>
-                <span style={{...styles.roleBadge, background: '#2563eb'}}>Admin</span>
-                <span style={styles.credential}>admin@eeims.com</span>
-                <span style={styles.password}>Admin@123</span>
-              </div>
-              <div style={styles.credentialItem}>
-                <span style={{...styles.roleBadge, background: '#4f46e5'}}>Manager</span>
-                <span style={styles.credential}>manager@eeims.com</span>
-                <span style={styles.password}>Manager@123</span>
-              </div>
-              <div style={styles.credentialItem}>
-                <span style={{...styles.roleBadge, background: '#0f766e'}}>Technician</span>
-                <span style={styles.credential}>tech@eeims.com</span>
-                <span style={styles.password}>Tech@123</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -454,41 +416,6 @@ const styles = {
   },
   featureText: {
     fontWeight: 500,
-  },
-  statsSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '2rem',
-    marginTop: '3rem',
-    padding: '1.25rem 2rem',
-    background: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '16px',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
-    position: 'relative',
-    zIndex: 2,
-  },
-  statsItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.25rem',
-  },
-  statsNumber: {
-    fontSize: '1.25rem',
-    fontWeight: '800',
-    color: 'white',
-  },
-  statsLabel: {
-    fontSize: '0.75rem',
-    opacity: 0.7,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  statsDivider: {
-    width: '1px',
-    height: '32px',
-    background: 'rgba(255, 255, 255, 0.2)',
   },
   wavePattern: {
     position: 'absolute',
@@ -712,46 +639,6 @@ const styles = {
     fontWeight: '600',
     textDecoration: 'none',
     fontSize: '0.875rem',
-  },
-  demoSection: {
-    marginTop: '1.5rem',
-    padding: '1.25rem',
-    background: '#f8fafc',
-    borderRadius: '16px',
-    border: '1px solid #e2e8f0',
-  },
-  demoTitle: {
-    fontSize: '0.6875rem',
-    fontWeight: '700',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    marginBottom: '1rem',
-    textAlign: 'center',
-  },
-  credentialsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.875rem',
-  },
-  credentialItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    fontSize: '0.8125rem',
-    flexWrap: 'wrap',
-  },
-  credential: {
-    color: '#334155',
-    fontFamily: 'monospace',
-    fontSize: '0.75rem',
-    fontWeight: 500,
-  },
-  password: {
-    color: '#94a3b8',
-    fontFamily: 'monospace',
-    fontSize: '0.6875rem',
-    marginLeft: 'auto',
   },
 };
 
