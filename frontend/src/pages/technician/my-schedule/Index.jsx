@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import TechnicianLayout from '../../../components/layout/TechnicianLayout';
-import Badge from '../../../components/ui/Badge';
-import Button from '../../../components/ui/Button';
-import Loader from '../../../components/ui/Loader';
-import EmptyState from '../../../components/ui/EmptyState';
 import maintenanceService from '../../../services/maintenanceService';
 import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const MySchedule = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [completing, setCompleting] = useState(null);
 
   useEffect(() => {
     loadTasks();
@@ -33,20 +29,6 @@ const MySchedule = () => {
     }
   };
 
-  const handleComplete = async (taskId) => {
-    try {
-      setCompleting(taskId);
-      await maintenanceService.complete(taskId, { notes: 'Completed via my schedule' });
-      toast.success('Task completed successfully');
-      loadTasks();
-    } catch (error) {
-      console.error('Error completing task:', error);
-      toast.error(error.response?.data?.message || 'Failed to complete task');
-    } finally {
-      setCompleting(null);
-    }
-  };
-
   const filteredTasks = tasks.filter(task => {
     if (filter === 'all') return true;
     return task.status === filter;
@@ -60,19 +42,63 @@ const MySchedule = () => {
   };
 
   const getStatusBadge = (status) => {
-    const map = {
-      pending: { variant: 'warning', label: 'Pending' },
-      completed: { variant: 'success', label: 'Completed' },
-      overdue: { variant: 'danger', label: 'Overdue' },
+    const styles = {
+      pending: { bg: '#fef3c7', color: '#92400e', label: 'Pending' },
+      completed: { bg: '#dcfce7', color: '#166534', label: 'Completed' },
+      overdue: { bg: '#fee2e2', color: '#991b1b', label: 'Overdue' },
     };
-    const style = map[status] || { variant: 'default', label: status };
-    return <Badge variant={style.variant}>{style.label}</Badge>;
+    const s = styles[status] || styles.pending;
+    return <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: '600', background: s.bg, color: s.color }}>{s.label}</span>;
+  };
+
+  const getBorderColor = (status) => {
+    const colors = {
+      pending: '#f59e0b',
+      completed: '#10b981',
+      overdue: '#dc2626',
+    };
+    return colors[status] || '#6b7280';
+  };
+
+  const StatCard = ({ label, count, color, gradient }) => (
+    <div style={{
+      background: 'var(--white)',
+      borderRadius: 'var(--radius-xl)',
+      padding: '1.25rem',
+      boxShadow: 'var(--shadow-md)',
+      border: '1px solid var(--border-light)',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: gradient }}></div>
+      <p style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>{label}</p>
+      <p style={{ fontSize: '1.75rem', fontWeight: '800', color: color }}>{count}</p>
+    </div>
+  );
+
+  const filterTabs = [
+    { key: 'all', label: 'All' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'completed', label: 'Completed' },
+    { key: 'overdue', label: 'Overdue' },
+  ];
+
+  const getEmptyMessage = (filter) => {
+    const messages = {
+      all: 'No maintenance tasks assigned yet',
+      pending: 'No pending tasks. Great work!',
+      completed: 'No completed tasks yet',
+      overdue: 'No overdue tasks. Keep it up!',
+    };
+    return messages[filter] || 'No tasks found';
   };
 
   if (loading) {
     return (
       <TechnicianLayout>
-        <Loader text="Loading your schedule..." />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <div style={{ fontSize: '1.125rem', color: '#64748b' }}>Loading your schedule...</div>
+        </div>
       </TechnicianLayout>
     );
   }
@@ -80,111 +106,172 @@ const MySchedule = () => {
   return (
     <TechnicianLayout>
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem' }}>
-          My Schedule
-        </h1>
-        <p style={{ color: '#6b7280' }}>
-          View and manage your assigned maintenance tasks.
-        </p>
+        <h1 style={{
+          fontSize: '2rem',
+          fontWeight: '800',
+          color: '#0f172a',
+          marginBottom: '0.5rem',
+          letterSpacing: '-0.025em'
+        }}>My Schedule</h1>
+        <p style={{ color: '#64748b', fontSize: '0.9375rem' }}>Your assigned maintenance tasks</p>
       </div>
 
-      {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        {[
-          { label: 'All Tasks', count: counts.all, color: '#2563eb' },
-          { label: 'Pending', count: counts.pending, color: '#f59e0b' },
-          { label: 'Completed', count: counts.completed, color: '#16a34a' },
-          { label: 'Overdue', count: counts.overdue, color: '#dc2626' },
-        ].map((item) => (
-          <div
-            key={item.label}
-            style={{
-              backgroundColor: 'white',
-              padding: '1.5rem',
-              borderRadius: '0.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              borderLeft: `4px solid ${item.color}`,
-            }}
-          >
-            <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280' }}>{item.label}</p>
-            <p style={{ margin: '0.5rem 0 0', fontSize: '1.5rem', fontWeight: '700', color: item.color }}>{item.count}</p>
-          </div>
-        ))}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+        gap: '1rem',
+        marginBottom: '2rem'
+      }}>
+        <StatCard label="Total Assigned" count={counts.all} color="#2563eb" gradient="linear-gradient(90deg, #3b82f6, #1d4ed8)" />
+        <StatCard label="Pending Tasks" count={counts.pending} color="#f59e0b" gradient="linear-gradient(90deg, #f59e0b, #d97706)" />
+        <StatCard label="Completed" count={counts.completed} color="#10b981" gradient="linear-gradient(90deg, #10b981, #059669)" />
+        <StatCard label="Overdue" count={counts.overdue} color="#dc2626" gradient="linear-gradient(90deg, #ef4444, #dc2626)" />
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {['all', 'pending', 'completed', 'overdue'].map((f) => (
+      <div style={{
+        display: 'flex',
+        gap: '0.75rem',
+        marginBottom: '1.5rem',
+        flexWrap: 'wrap'
+      }}>
+        {filterTabs.map(tab => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
             style={{
-              padding: '0.5rem 1rem',
-              border: 'none',
-              borderRadius: '0.375rem',
-              backgroundColor: filter === f ? '#2563eb' : '#e5e7eb',
-              color: filter === f ? '#fff' : '#374151',
-              fontWeight: '500',
+              padding: '0.625rem 1.25rem',
+              background: filter === tab.key ? 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)' : 'var(--white)',
+              color: filter === tab.key ? 'white' : '#475569',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: '0.875rem',
+              fontWeight: '600',
               cursor: 'pointer',
-              textTransform: 'capitalize',
+              transition: 'all 0.2s',
+              boxShadow: filter === tab.key ? '0 4px 12px rgba(13, 148, 136, 0.3)' : 'none'
             }}
           >
-            {f} ({counts[f]})
+            {tab.label} ({counts[tab.key]})
           </button>
         ))}
       </div>
 
-      {/* Tasks List */}
       {filteredTasks.length === 0 ? (
-        <EmptyState
-          icon="📋"
-          title="No tasks found"
-          description="You don't have any maintenance tasks in this category."
-        />
+        <div style={{
+          background: 'var(--white)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '4rem 2rem',
+          boxShadow: 'var(--shadow-md)',
+          border: '1px solid var(--border-light)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📋</div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem' }}>
+            {getEmptyMessage(filter)}
+          </h3>
+          <p style={{ color: '#64748b' }}>Tasks assigned to you will appear here</p>
+        </div>
       ) : (
-        <div style={{ backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ backgroundColor: '#f9fafb' }}>
-              <tr>
-                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Scheduled Date</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTasks.map((task) => (
-                <tr key={task.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '1rem', color: '#111827', fontWeight: '500' }}>
-                    {task.Equipment?.name || `Equipment #${task.equipmentId}`}
-                  </td>
-                  <td style={{ padding: '1rem', color: '#6b7280' }}>
-                    {new Date(task.scheduledDate).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {filteredTasks.map((task) => {
+            const isOverdue = task.status === 'overdue';
+            return (
+              <div key={task.id} style={{
+                background: 'var(--white)',
+                borderRadius: 'var(--radius-xl)',
+                boxShadow: 'var(--shadow-md)',
+                border: '1px solid var(--border-light)',
+                borderLeft: `4px solid ${getBorderColor(task.status)}`,
+                overflow: 'hidden',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--shadow-lg)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = 'var(--shadow-md)'}
+              >
+                <div style={{
+                  padding: '1.5rem',
+                  background: isOverdue ? '#fef2f2' : 'transparent'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                    <div>
+                      <h3 style={{
+                        fontSize: '1.125rem',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        margin: 0,
+                        marginBottom: '0.5rem'
+                      }}>
+                        {task.Equipment?.name || `Equipment #${task.equipmentId}`}
+                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748b', fontSize: '0.875rem' }}>
+                        <span>📅</span>
+                        <span>Scheduled: {task.scheduledDate ? new Date(task.scheduledDate).toLocaleDateString() : 'Not set'}</span>
+                        {isOverdue && (
+                          <span style={{
+                            background: '#fee2e2',
+                            color: '#991b1b',
+                            padding: '0.125rem 0.5rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.6875rem',
+                            fontWeight: '700',
+                            marginLeft: '0.5rem'
+                          }}>
+                            OVERDUE
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     {getStatusBadge(task.status)}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    {task.status === 'pending' && (
-                      <Button
-                        variant="success"
-                        size="sm"
-                        onClick={() => handleComplete(task.id)}
-                        disabled={completing === task.id}
-                      >
-                        {completing === task.id ? 'Completing...' : 'Mark Complete'}
-                      </Button>
-                    )}
-                    {task.status === 'completed' && (
-                      <Link to="/technician/log-maintenance">
-                        <Button variant="outline" size="sm">View Notes</Button>
-                      </Link>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+
+                  {task.notes && (
+                    <div style={{
+                      background: '#f8fafc',
+                      padding: '0.75rem 1rem',
+                      borderRadius: 'var(--radius-md)',
+                      marginBottom: '1rem'
+                    }}>
+                      <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Admin Notes</p>
+                      <p style={{ fontSize: '0.875rem', color: '#475569', fontStyle: 'italic', margin: 0 }}>{task.notes}</p>
+                    </div>
+                  )}
+
+                  {task.status === 'completed' && task.completedDate && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <p style={{ fontSize: '0.875rem', color: '#059669', fontWeight: '600' }}>
+                        ✓ Completed on {new Date(task.completedDate).toLocaleDateString()}
+                      </p>
+                      {task.completionNotes && (
+                        <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '0.25rem' }}>{task.completionNotes}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {(task.status === 'pending' || task.status === 'overdue') && (
+                    <Link
+                      to={`/technician/log-maintenance?id=${task.id}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.625rem 1.25rem',
+                        background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+                        color: 'white',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.875rem',
+                        fontWeight: '600',
+                        textDecoration: 'none',
+                        boxShadow: '0 4px 12px rgba(13, 148, 136, 0.3)'
+                      }}
+                    >
+                      <span>🔧</span>
+                      Log Completion
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </TechnicianLayout>

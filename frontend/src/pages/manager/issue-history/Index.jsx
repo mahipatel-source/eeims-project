@@ -3,111 +3,124 @@ import ManagerLayout from '../../../components/layout/ManagerLayout';
 import issueService from '../../../services/issueService';
 import toast from 'react-hot-toast';
 
-const ManagerIssueHistory = () => {
+const IssueHistory = () => {
   const [issues, setIssues] = useState([]);
-  const [filterStatus, setFilterStatus] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [selectedIssue, setSelectedIssue] = useState(null);
-  const [showDetail, setShowDetail] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showReturnModal, setShowReturnModal] = useState(null);
 
   useEffect(() => {
-    loadData();
+    loadIssues();
   }, []);
 
-  const loadData = async () => {
+  const loadIssues = async () => {
     try {
       setLoading(true);
-      const issuesRes = await issueService.getAll();
-      setIssues(issuesRes.data || []);
+      const response = await issueService.getAll();
+      setIssues(response.data || []);
     } catch (error) {
       console.error('Error loading issues:', error);
-      toast.error('Failed to load issue data');
+      toast.error('Failed to load issues');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredIssues = issues.filter((issue) => {
-    const query = searchTerm.toLowerCase();
-    const matchesSearch =
-      issue.Equipment?.name?.toLowerCase().includes(query) ||
-      issue.User?.name?.toLowerCase().includes(query) ||
-      issue.remarks?.toLowerCase().includes(query) ||
-      issue.status?.toLowerCase().includes(query);
-    const matchesStatus = !filterStatus || issue.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const getEquipmentName = (issue) => issue.Equipment?.name || `Equipment #${issue.equipmentId}`;
-
-  const getStatusColor = (status) => {
-    const colors = {
-      requested: { bg: '#fef3c7', text: '#92400e', label: '🟡 Requested' },
-      issued: { bg: '#dcfce7', text: '#166534', label: '✅ Issued' },
-      returned: { bg: '#dbeafe', text: '#0c4a6e', label: '🔵 Returned' },
-      rejected: { bg: '#fee2e2', text: '#991b1b', label: '⛔ Rejected' },
-    };
-    return colors[status] || { bg: '#e5e7eb', text: '#374151', label: status || 'Unknown' };
-  };
-
-  const openDetailModal = (issue) => {
-    setSelectedIssue(issue);
-    setShowDetail(true);
-  };
-
-  const closeDetailModal = () => {
-    setShowDetail(false);
-    setSelectedIssue(null);
-  };
-
-  const handleApprove = async (issueId) => {
+  const handleApprove = async (id) => {
     try {
-      setLoading(true);
-      await issueService.approve(issueId);
-      toast.success('Request approved and issued.');
-      await loadData();
+      setActionLoading(id);
+      await issueService.approve(id);
+      toast.success('Request approved');
+      loadIssues();
     } catch (error) {
-      console.error('Approve request failed:', error);
-      toast.error(error?.response?.data?.message || 'Failed to approve request');
+      console.error('Approve failed:', error);
+      toast.error(error?.response?.data?.message || 'Failed to approve');
     } finally {
-      setLoading(false);
+      setActionLoading(null);
     }
   };
 
-  const handleReject = async (issueId) => {
+  const handleReject = async (id) => {
+    if (!rejectReason.trim()) {
+      toast.error('Please enter a rejection reason');
+      return;
+    }
+
     try {
-      setLoading(true);
-      await issueService.reject(issueId);
-      toast.success('Request rejected.');
-      await loadData();
+      setActionLoading(id);
+      await issueService.reject(id, rejectReason);
+      toast.success('Request rejected');
+      setShowRejectModal(null);
+      setRejectReason('');
+      loadIssues();
     } catch (error) {
-      console.error('Reject request failed:', error);
-      toast.error(error?.response?.data?.message || 'Failed to reject request');
+      console.error('Reject failed:', error);
+      toast.error(error?.response?.data?.message || 'Failed to reject');
     } finally {
-      setLoading(false);
+      setActionLoading(null);
     }
   };
 
-  const handleReturn = async (issueId) => {
+  const handleReturn = async (id) => {
     try {
-      setLoading(true);
-      await issueService.return(issueId);
-      toast.success('Equipment returned successfully.');
-      await loadData();
+      setActionLoading(id);
+      await issueService.returnIssue(id);
+      toast.success('Equipment marked as returned');
+      setShowReturnModal(null);
+      loadIssues();
     } catch (error) {
       console.error('Return failed:', error);
-      toast.error(error?.response?.data?.message || 'Failed to return equipment');
+      toast.error(error?.response?.data?.message || 'Failed to mark as returned');
     } finally {
-      setLoading(false);
+      setActionLoading(null);
     }
   };
+
+  const filteredIssues = issues.filter(issue => {
+    const matchesTab = activeTab === 'all' || issue.status === activeTab;
+    const matchesSearch = 
+      issue.Equipment?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      issue.User?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  const stats = {
+    total: issues.length,
+    pending: issues.filter(i => i.status === 'pending').length,
+    issued: issues.filter(i => i.status === 'issued').length,
+    returned: issues.filter(i => i.status === 'returned').length,
+    rejected: issues.filter(i => i.status === 'rejected').length,
+  };
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      pending: { bg: '#fef3c7', color: '#92400e', label: 'Pending' },
+      approved: { bg: '#dcfce7', color: '#166534', label: 'Approved' },
+      issued: { bg: '#dbeafe', color: '#1e40af', label: 'Issued' },
+      returned: { bg: '#d1fae5', color: '#065f46', label: 'Returned' },
+      rejected: { bg: '#fee2e2', color: '#991b1b', label: 'Rejected' },
+    };
+    const s = styles[status] || styles.pending;
+    return <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: '600', background: s.bg, color: s.color }}>{s.label}</span>;
+  };
+
+  const tabs = [
+    { key: 'all', label: 'All', count: stats.total },
+    { key: 'pending', label: 'Pending', count: stats.pending },
+    { key: 'issued', label: 'Issued', count: stats.issued },
+    { key: 'returned', label: 'Returned', count: stats.returned },
+    { key: 'rejected', label: 'Rejected', count: stats.rejected },
+  ];
 
   if (loading) {
     return (
       <ManagerLayout>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-          <div style={{ fontSize: '1.125rem', color: '#6b7280' }}>Loading issues...</div>
+          <div style={{ fontSize: '1.125rem', color: '#64748b' }}>Loading issues...</div>
         </div>
       </ManagerLayout>
     );
@@ -118,226 +131,189 @@ const ManagerIssueHistory = () => {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{
           fontSize: '2rem',
-          fontWeight: '700',
-          color: '#111827',
-          marginBottom: '0.5rem'
-        }}>Request History</h1>
-        <p style={{ color: '#6b7280' }}>Review all equipment requests and issued items.</p>
+          fontWeight: '800',
+          color: '#0f172a',
+          marginBottom: '0.5rem',
+          letterSpacing: '-0.025em'
+        }}>Issue History</h1>
+        <p style={{ color: '#64748b', fontSize: '0.9375rem' }}>Complete record of all equipment issues</p>
       </div>
 
-      {/* Filters */}
       <div style={{
-        backgroundColor: 'var(--white)',
-        borderRadius: 'var(--radius)',
-        padding: '1.5rem',
-        boxShadow: 'var(--shadow)',
-        border: '1px solid var(--border)',
-        marginBottom: '2rem'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+        gap: '1rem',
+        marginBottom: '1.5rem'
       }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1rem'
-        }}>
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '0.5rem'
-            }}>Search</label>
-            <input
-              type="text"
-              placeholder="Search issues..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                fontSize: '0.875rem'
-              }}
-            />
-          </div>
-
-          <div>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: '#374151',
-              marginBottom: '0.5rem'
-            }}>Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                fontSize: '0.875rem'
-              }}
-            >
-              <option value="">All Statuses</option>
-              <option value="requested">Requested</option>
-              <option value="issued">Issued</option>
-              <option value="returned">Returned</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-        </div>
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: '1rem',
+              background: activeTab === tab.key ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : 'var(--white)',
+              color: activeTab === tab.key ? 'white' : '#475569',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-lg)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              boxShadow: activeTab === tab.key ? '0 4px 12px rgba(99, 102, 241, 0.3)' : 'none'
+            }}
+          >
+            <p style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.25rem' }}>{tab.count}</p>
+            <p style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase' }}>{tab.label}</p>
+          </button>
+        ))}
       </div>
 
-      {/* Issues Table */}
       <div style={{
-        backgroundColor: 'var(--white)',
-        borderRadius: 'var(--radius)',
-        boxShadow: 'var(--shadow)',
-        border: '1px solid var(--border)',
+        background: 'var(--white)',
+        borderRadius: 'var(--radius-xl)',
+        padding: '1.5rem',
+        boxShadow: 'var(--shadow-md)',
+        border: '1px solid var(--border-light)',
+        marginBottom: '1.5rem'
+      }}>
+        <input
+          type="text"
+          placeholder="Search by equipment or employee name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.875rem',
+            border: '2px solid var(--border-light)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.9375rem',
+            outline: 'none'
+          }}
+        />
+      </div>
+
+      <div style={{
+        background: 'var(--white)',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: 'var(--shadow-md)',
+        border: '1px solid var(--border-light)',
         overflow: 'hidden'
       }}>
-        <div style={{
-          padding: '1rem 1.5rem',
-          borderBottom: '1px solid var(--border)',
-          backgroundColor: 'var(--light)'
-        }}>
-          <h3 style={{
-            margin: 0,
-            fontSize: '1.125rem',
-            fontWeight: '600',
-            color: '#111827'
-          }}>Requests ({filteredIssues.length})</h3>
-        </div>
-
-        {filteredIssues.length > 0 ? (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ backgroundColor: 'var(--light)' }}>
-                <tr>
-                  <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Requester</th>
-                  <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Quantity</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Requested On</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Return Date</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredIssues.map((issue) => {
-                  const statusColor = getStatusColor(issue.status);
-                  return (
-                    <tr key={issue.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '1rem', color: '#111827' }}>{issue.User?.name || `User #${issue.userId}`}</td>
-                      <td style={{ padding: '1rem', color: '#6b7280' }}>{getEquipmentName(issue)}</td>
-                      <td style={{ padding: '1rem', textAlign: 'center', color: '#111827' }}>{issue.quantity}</td>
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '0.25rem 0.75rem',
-                          backgroundColor: statusColor.bg,
-                          color: statusColor.text,
-                          borderRadius: '0.25rem',
-                          fontSize: '0.75rem',
-                          fontWeight: '600'
-                        }}>
-                          {statusColor.label}
-                        </span>
-                      </td>
-                      <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>{new Date(issue.createdAt).toLocaleDateString()}</td>
-                      <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>{issue.returnDate ? new Date(issue.returnDate).toLocaleDateString() : '—'}</td>
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
+              <tr>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>#</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Equipment</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Issued To</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Qty</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Issue Date</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Expected Return</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Actual Return</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredIssues.length > 0 ? (
+                filteredIssues.map((issue, index) => (
+                  <tr key={issue.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '0.875rem 1rem', fontSize: '0.875rem', color: '#94a3b8', fontWeight: '600' }}>
+                      {index + 1}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem' }}>
+                      <p style={{ fontWeight: '600', color: '#0f172a', margin: 0 }}>{issue.Equipment?.name || `Equipment #${issue.equipmentId}`}</p>
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', color: '#475569' }}>
+                      {issue.User?.name || '-'}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center', fontWeight: '700' }}>
+                      {issue.quantity}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                      {issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : '—'}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                      {issue.requestedReturnDate ? new Date(issue.requestedReturnDate).toLocaleDateString() : '—'}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                      {issue.returnDate ? new Date(issue.returnDate).toLocaleDateString() : '—'}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
+                      {getStatusBadge(issue.status)}
+                    </td>
+                    <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
+                      {issue.status === 'issued' && (
+                        <button
+                          onClick={() => setShowReturnModal(issue.id)}
+                          style={{
+                            padding: '0.375rem 0.875rem',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--radius)',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            cursor: actionLoading === issue.id ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          Mark Returned
+                        </button>
+                      )}
+                      {issue.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                           <button
-                            onClick={() => openDetailModal(issue)}
+                            onClick={() => handleApprove(issue.id)}
+                            disabled={actionLoading === issue.id}
                             style={{
                               padding: '0.375rem 0.75rem',
-                              backgroundColor: '#2563eb',
+                              background: '#10b981',
                               color: 'white',
                               border: 'none',
-                              borderRadius: '0.25rem',
-                              fontSize: '0.875rem',
-                              fontWeight: '500',
-                              cursor: 'pointer'
+                              borderRadius: 'var(--radius)',
+                              fontSize: '0.6875rem',
+                              fontWeight: '600',
+                              cursor: actionLoading === issue.id ? 'not-allowed' : 'pointer'
                             }}
                           >
-                            View
+                            Approve
                           </button>
-                          {issue.status === 'requested' && (
-                            <>
-                              <button
-                                onClick={() => handleApprove(issue.id)}
-                                style={{
-                                  padding: '0.375rem 0.75rem',
-                                  backgroundColor: '#16a34a',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '0.25rem',
-                                  fontSize: '0.875rem',
-                                  fontWeight: '500',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleReject(issue.id)}
-                                style={{
-                                  padding: '0.375rem 0.75rem',
-                                  backgroundColor: '#dc2626',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '0.25rem',
-                                  fontSize: '0.875rem',
-                                  fontWeight: '500',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                          {issue.status === 'issued' && (
-                            <button
-                              onClick={() => handleReturn(issue.id)}
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                backgroundColor: '#2563eb',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.25rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Return
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setShowRejectModal(issue.id)}
+                            disabled={actionLoading === issue.id}
+                            style={{
+                              padding: '0.375rem 0.75rem',
+                              background: '#dc2626',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 'var(--radius)',
+                              fontSize: '0.6875rem',
+                              fontWeight: '600',
+                              cursor: actionLoading === issue.id ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            Reject
+                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div style={{
-            padding: '3rem',
-            textAlign: 'center',
-            color: '#6b7280'
-          }}>
-            <p>{searchTerm || filterStatus ? 'No requests found matching your filters.' : 'No requests found.'}</p>
-          </div>
-        )}
+                      )}
+                      {(issue.status === 'returned' || issue.status === 'rejected') && (
+                        <span style={{ color: '#94a3b8', fontSize: '0.875rem' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="9" style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📋</div>
+                    <p style={{ fontSize: '1rem', fontWeight: '500' }}>No issue records found</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Detail Modal */}
-      {showDetail && selectedIssue && (
+      {showRejectModal && (
         <div style={{
           position: 'fixed',
           inset: 0,
@@ -346,100 +322,121 @@ const ManagerIssueHistory = () => {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
-        }} onClick={closeDetailModal}>
+        }} onClick={() => { setShowRejectModal(null); setRejectReason(''); }}>
           <div style={{
-            backgroundColor: 'var(--white)',
-            borderRadius: 'var(--radius)',
-            padding: '2rem',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflowY: 'auto'
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '1.75rem',
+            maxWidth: '450px',
+            width: '90%'
           }} onClick={e => e.stopPropagation()}>
-            <h2 style={{
-              fontSize: '1.5rem',
-              fontWeight: '700',
-              color: '#111827',
-              marginBottom: '1.5rem'
-            }}>{selectedIssue.Equipment?.name || `Equipment #${selectedIssue.equipmentId}`}</h2>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '1.5rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Requester</p>
-                <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
-                  {selectedIssue.User?.name || `User #${selectedIssue.userId}`}
-                </p>
-              </div>
-
-              <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Status</p>
-                <p style={{
-                  display: 'inline-block',
-                  padding: '0.25rem 0.75rem',
-                  backgroundColor: getStatusColor(selectedIssue.status).bg,
-                  color: getStatusColor(selectedIssue.status).text,
-                  borderRadius: '0.25rem',
-                  fontSize: '0.875rem',
-                  fontWeight: '600'
-                }}>
-                  {getStatusColor(selectedIssue.status).label}
-                </p>
-              </div>
-
-              <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Requested on</p>
-                <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
-                  {new Date(selectedIssue.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-
-              <div>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Return date</p>
-                <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
-                  {selectedIssue.returnDate ? new Date(selectedIssue.returnDate).toLocaleDateString() : 'Not set'}
-                </p>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>Quantity</p>
-              <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{selectedIssue.quantity}</p>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>Notes</p>
-              <p style={{
-                fontSize: '0.95rem',
-                color: '#111827',
-                backgroundColor: '#f9fafb',
-                padding: '1rem',
-                borderRadius: '0.5rem',
-                lineHeight: '1.5'
-              }}>
-                {selectedIssue.remarks || 'No notes provided.'}
-              </p>
-            </div>
-
-            <button
-              onClick={closeDetailModal}
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', marginBottom: '1rem' }}>
+              Reject Request
+            </h3>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              rows={4}
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                backgroundColor: '#e5e7eb',
-                color: '#111827',
-                border: 'none',
-                borderRadius: 'var(--radius)',
-                fontWeight: '500',
-                cursor: 'pointer'
+                border: '2px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.875rem',
+                marginBottom: '1rem',
+                resize: 'vertical'
               }}
-            >
-              Close
-            </button>
+            />
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setShowRejectModal(null); setRejectReason(''); }}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: 'var(--radius)',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReject(showRejectModal)}
+                disabled={actionLoading || !rejectReason.trim()}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius)',
+                  fontWeight: '600',
+                  cursor: (!rejectReason.trim() || actionLoading) ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {actionLoading ? 'Rejecting...' : 'Confirm Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReturnModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }} onClick={() => setShowReturnModal(null)}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '1.75rem',
+            maxWidth: '400px',
+            width: '90%'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', marginBottom: '0.5rem' }}>
+              Confirm Equipment Return
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1.5rem' }}>
+              Are you sure you want to mark this equipment as returned? This will increase the available stock.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowReturnModal(null)}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: 'var(--radius)',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReturn(showReturnModal)}
+                disabled={actionLoading}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius)',
+                  fontWeight: '600',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {actionLoading ? 'Processing...' : 'Confirm Return'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -447,4 +444,4 @@ const ManagerIssueHistory = () => {
   );
 };
 
-export default ManagerIssueHistory;
+export default IssueHistory;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import userService from '../../../services/userService';
+import Modal from '../../../components/ui/Modal';
 import toast from 'react-hot-toast';
 
 const Users = () => {
@@ -29,7 +30,8 @@ const Users = () => {
     try {
       setLoading(true);
       const response = await userService.getAll();
-      setUsers(response.data || []);
+      const allUsers = response.data || [];
+      setUsers(allUsers.filter((user) => ['admin', 'manager', 'technician'].includes(user.role)));
     } catch (error) {
       console.error('Error loading users:', error);
       toast.error('Failed to load users');
@@ -181,69 +183,11 @@ const Users = () => {
     setSelectedUser(null);
   };
 
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-      }}>
-        <div style={{
-          backgroundColor: 'var(--white)',
-          borderRadius: 'var(--radius)',
-          padding: '2rem',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          boxShadow: 'var(--shadow)'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1.5rem'
-          }}>
-            <h3 style={{
-              margin: 0,
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              color: '#111827'
-            }}>
-              {title}
-            </h3>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: '#6b7280'
-              }}
-            >
-              ×
-            </button>
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
   const getRoleBadge = (role) => {
     const roles = {
-      admin: { color: '#dc2626', bgColor: '#fef2f2' },
-      manager: { color: '#2563eb', bgColor: '#eff6ff' },
-      technician: { color: '#16a34a', bgColor: '#f0fdf4' }
+      admin: { color: '#1d4ed8', bgColor: '#dbeafe' },
+      manager: { color: '#15803d', bgColor: '#dcfce7' },
+      technician: { color: '#0f766e', bgColor: '#ccfbf1' }
     };
     return roles[role] || roles.technician;
   };
@@ -278,8 +222,8 @@ const Users = () => {
               fontWeight: '700',
               color: '#111827',
               marginBottom: '0.5rem'
-            }}>User Management</h1>
-            <p style={{ color: '#6b7280' }}>Manage system users and their roles.</p>
+            }}>Staff Management</h1>
+            <p style={{ color: '#6b7280' }}>Manage admin, manager, and technician accounts.</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
@@ -305,7 +249,7 @@ const Users = () => {
         }}>
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder="Search staff..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -353,7 +297,7 @@ const Users = () => {
               fontWeight: '600',
               color: '#111827'
             }}>
-              Users ({filteredUsers.length})
+              Staff Members ({filteredUsers.length})
             </h3>
           </div>
 
@@ -361,6 +305,7 @@ const Users = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ backgroundColor: 'var(--light)' }}>
                 <tr>
+                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>#</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Name</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Email</th>
                   <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Role</th>
@@ -370,10 +315,11 @@ const Users = () => {
               </thead>
               <tbody>
                 {filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => {
+                  filteredUsers.map((user, index) => {
                     const roleBadge = getRoleBadge(user.role);
                     return (
-                      <tr key={user.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <tr key={user.id} style={{ borderBottom: '1px solid var(--border)', backgroundColor: index % 2 ? '#fcfdff' : '#ffffff' }}>
+                        <td style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>{index + 1}</td>
                         <td style={{ padding: '1rem' }}>
                           <div style={{ fontWeight: '500', color: '#111827' }}>{user.name}</div>
                         </td>
@@ -396,36 +342,42 @@ const Users = () => {
                         </td>
                         <td style={{ padding: '1rem', textAlign: 'center' }}>
                           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                            <button
-                              onClick={() => openEditModal(user)}
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                backgroundColor: '#2563eb',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.25rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => openDeleteModal(user)}
-                              style={{
-                                padding: '0.375rem 0.75rem',
-                                backgroundColor: '#dc2626',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '0.25rem',
-                                fontSize: '0.875rem',
-                                fontWeight: '500',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Delete
-                            </button>
+                            {user.role === 'admin' ? (
+                              <span style={{ color: '#64748b', fontSize: '0.875rem' }}>Protected</span>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => openEditModal(user)}
+                                  style={{
+                                    padding: '0.375rem 0.75rem',
+                                    backgroundColor: '#2563eb',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '0.25rem',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '500',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => openDeleteModal(user)}
+                                  style={{
+                                    padding: '0.375rem 0.75rem',
+                                    backgroundColor: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '0.25rem',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '500',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -433,7 +385,7 @@ const Users = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="5" style={{
+                    <td colSpan="6" style={{
                       padding: '3rem',
                       textAlign: 'center',
                       color: '#6b7280',
@@ -553,9 +505,8 @@ const Users = () => {
                 fontSize: '0.875rem'
               }}
             >
-              <option value="technician">Technician</option>
               <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
+              <option value="technician">Technician</option>
             </select>
             {formErrors.role && <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.25rem' }}>{formErrors.role}</p>}
           </div>
@@ -697,9 +648,8 @@ const Users = () => {
                 fontSize: '0.875rem'
               }}
             >
-              <option value="technician">Technician</option>
               <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
+              <option value="technician">Technician</option>
             </select>
           </div>
 

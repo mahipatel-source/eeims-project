@@ -143,8 +143,14 @@ exports.completeMaintenance = async (req, res) => {
 // get maintenance by technician
 exports.getMaintenanceByTechnician = async (req, res) => {
   try {
+    const technicianId = Number(req.params.technicianId);
+
+    if (req.user.role === 'technician' && req.user.id !== technicianId) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
     const records = await Maintenance.findAll({
-      where: { technicianId: req.params.technicianId },
+      where: { technicianId },
       include: [
         { model: Equipment, attributes: ['id', 'name'] },
       ],

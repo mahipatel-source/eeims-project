@@ -94,6 +94,11 @@
   --space-8: 2rem;
   --space-10: 2.5rem;
   --space-12: 3rem;
+
+  /* App Shell */
+  --sidebar-width: 272px;
+  --topbar-height: 72px;
+  --content-max-width: 1440px;
   
   /* Typography */
   --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

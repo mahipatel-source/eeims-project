@@ -1,144 +1,176 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import alertService from '../../../services/alertService';
+import Badge from '../../../components/ui/Badge';
+import EmptyState from '../../../components/ui/EmptyState';
+import Loader from '../../../components/ui/Loader';
+import Modal from '../../../components/ui/Modal';
 import toast from 'react-hot-toast';
+
+const typeConfig = {
+  low_stock: { label: 'Low Stock', variant: 'danger' },
+  maintenance_due: { label: 'Maintenance Due', variant: 'warning' },
+  general: { label: 'General', variant: 'primary' },
+};
 
 const Alerts = () => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadAlerts();
+    const timer = setInterval(loadAlerts, 60000);
+    return () => clearInterval(timer);
   }, []);
 
-  const loadData = async () => {
+  const unreadCount = useMemo(() => alerts.filter((item) => !item.isRead).length, [alerts]);
+
+  const loadAlerts = async () => {
     try {
-      console.log('Starting to load alerts...');
       setLoading(true);
-      setError(null);
-      
       const response = await alertService.getAll();
-      console.log('Got response:', response);
-      
-      // Handle response structure - service returns response.data which has {success, data: [...]}
-      const alertsData = response.data ? response.data : response;
-      console.log('Extracted alerts data:', alertsData);
-      
-      setAlerts(Array.isArray(alertsData) ? alertsData : []);
-      setLoading(false);
+      setAlerts(response.data || []);
     } catch (error) {
       console.error('Error loading alerts:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
-      setError(errorMsg);
-      toast.error('Failed to load alerts: ' + errorMsg);
-      setAlerts([]);
+      toast.error('Failed to load alerts');
+    } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <p>Loading alerts...</p>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const handleMarkAsRead = async (id) => {
+    try {
+      await alertService.markAsRead(id);
+      setAlerts((prev) => prev.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
+      toast.success('Alert marked as read');
+    } catch (error) {
+      console.error('Error marking alert as read:', error);
+      toast.error('Failed to mark alert as read');
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      setSubmitting(true);
+      await alertService.markAllAsRead();
+      setAlerts((prev) => prev.map((item) => ({ ...item, isRead: true })));
+      toast.success('All alerts marked as read');
+    } catch (error) {
+      console.error('Error marking all alerts as read:', error);
+      toast.error('Failed to mark all alerts as read');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedAlert) return;
+
+    try {
+      setSubmitting(true);
+      await alertService.delete(selectedAlert.id);
+      setAlerts((prev) => prev.filter((item) => item.id !== selectedAlert.id));
+      toast.success('Alert deleted successfully');
+      setShowDeleteModal(false);
+      setSelectedAlert(null);
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      toast.error('Failed to delete alert');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <AdminLayout>
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{
-          fontSize: '2rem',
-          fontWeight: '700',
-          color: '#111827',
-          marginBottom: '1rem'
-        }}>Alerts Management</h1>
-        
-        {error && (
-          <div style={{
-            backgroundColor: '#fee2e2',
-            color: '#7f1d1d',
-            padding: '1rem',
-            borderRadius: 'var(--radius)',
-            marginBottom: '1rem',
-            border: '1px solid #fecaca'
-          }}>
-            Error: {error}
-          </div>
-        )}
-
-        <div style={{
-          backgroundColor: 'var(--white)',
-          borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)',
-          border: '1px solid var(--border)',
-          padding: '1.5rem'
-        }}>
-          <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem', fontWeight: '600' }}>
-            Alerts ({alerts.length} total)
-          </h2>
-          
-          {alerts.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '0.875rem'
-              }}>
-                <thead style={{ backgroundColor: 'var(--light)' }}>
-                  <tr>
-                    <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: '600', borderBottom: '1px solid var(--border)' }}>Message</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', borderBottom: '1px solid var(--border)' }}>Type</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', borderBottom: '1px solid var(--border)' }}>Status</th>
-                    <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: '600', borderBottom: '1px solid var(--border)' }}>Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {alerts.map((alert) => (
-                    <tr key={alert.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '0.75rem' }}>{alert.message}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          backgroundColor: alert.type === 'low_stock' ? '#fffbeb' : '#eff6ff',
-                          color: alert.type === 'low_stock' ? '#d97706' : '#2563eb'
-                        }}>
-                          {alert.type}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <span style={{
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          backgroundColor: alert.isRead ? '#f0fdf4' : '#fef2f2',
-                          color: alert.isRead ? '#16a34a' : '#dc2626'
-                        }}>
-                          {alert.isRead ? 'Read' : 'Unread'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center', color: '#6b7280' }}>
-                        {new Date(alert.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p style={{ color: '#6b7280', textAlign: 'center', padding: '2rem' }}>
-              No alerts found.
-            </p>
-          )}
+      <div style={{ marginBottom: '1.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+        <div>
+          <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.45rem' }}>Alerts</h1>
+          <p style={{ color: '#64748b' }}>{unreadCount} unread alerts</p>
         </div>
+        {unreadCount > 0 && (
+          <button
+            onClick={handleMarkAllAsRead}
+            disabled={submitting}
+            style={{ backgroundColor: '#2563eb', color: 'white', borderRadius: '12px', padding: '0.8rem 1.1rem', fontWeight: '600', opacity: submitting ? 0.7 : 1 }}
+          >
+            Mark All as Read
+          </button>
+        )}
       </div>
+
+      {loading ? (
+        <Loader text="Loading alerts..." />
+      ) : alerts.length === 0 ? (
+        <EmptyState icon="✅" title="No alerts found" description="Your system is running smoothly!" />
+      ) : (
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {alerts.map((alert) => {
+            const config = typeConfig[alert.type] || typeConfig.general;
+            return (
+              <div
+                key={alert.id}
+                style={{
+                  backgroundColor: alert.isRead ? '#ffffff' : '#eff6ff',
+                  border: `1px solid ${alert.isRead ? '#e2e8f0' : '#bfdbfe'}`,
+                  borderRadius: '18px',
+                  boxShadow: '0 8px 22px rgba(15, 23, 42, 0.06)',
+                  padding: '1rem 1.1rem',
+                  display: 'flex',
+                  gap: '1rem',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <div style={{ width: '10px', paddingTop: '0.35rem' }}>
+                  {!alert.isRead && <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#2563eb' }} />}
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+                    <Badge variant={config.variant} size="sm">{config.label}</Badge>
+                    {alert.Equipment?.name && <span style={{ color: '#64748b', fontSize: '0.85rem' }}>{alert.Equipment.name}</span>}
+                    <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{new Date(alert.createdAt).toLocaleString()}</span>
+                  </div>
+                  <div style={{ color: '#0f172a', fontWeight: alert.isRead ? '500' : '700', lineHeight: 1.6 }}>{alert.message}</div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {!alert.isRead && (
+                    <button
+                      onClick={() => handleMarkAsRead(alert.id)}
+                      style={{ padding: '0.55rem 0.85rem', borderRadius: '10px', backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: '600' }}
+                    >
+                      Mark as Read
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedAlert(alert);
+                      setShowDeleteModal(true);
+                    }}
+                    style={{ padding: '0.55rem 0.85rem', borderRadius: '10px', backgroundColor: '#fee2e2', color: '#b91c1c', fontWeight: '600' }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Modal isOpen={showDeleteModal} onClose={() => { setShowDeleteModal(false); setSelectedAlert(null); }} title="Delete Alert" size="sm">
+        <p style={{ color: '#64748b', marginBottom: '1.25rem' }}>Are you sure you want to delete this alert?</p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+          <button onClick={() => { setShowDeleteModal(false); setSelectedAlert(null); }} style={{ padding: '0.75rem 1rem', borderRadius: '10px', backgroundColor: '#f1f5f9', color: '#334155' }}>Cancel</button>
+          <button onClick={handleDelete} disabled={submitting} style={{ padding: '0.75rem 1rem', borderRadius: '10px', backgroundColor: '#dc2626', color: 'white', fontWeight: '600', opacity: submitting ? 0.7 : 1 }}>
+            {submitting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </Modal>
     </AdminLayout>
   );
 };

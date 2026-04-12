@@ -9,9 +9,9 @@ const createDemoUsers = async () => {
     console.log('✅ Database connected');
 
     const demoUsers = [
-      { name: 'Admin User', email: 'admin@example.com', password: 'password123', role: 'admin' },
-      { name: 'Manager User', email: 'manager@example.com', password: 'password123', role: 'manager' },
-      { name: 'John Technician', email: 'technician@example.com', password: 'password123', role: 'technician' }
+      { name: 'System Admin', email: 'admin@eeims.com', password: 'Admin@123', role: 'admin' },
+      { name: 'Manager User', email: 'manager@eeims.com', password: 'Manager@123', role: 'manager' },
+      { name: 'John Technician', email: 'tech@eeims.com', password: 'Tech@123', role: 'technician' }
     ];
 
     for (const demoUser of demoUsers) {

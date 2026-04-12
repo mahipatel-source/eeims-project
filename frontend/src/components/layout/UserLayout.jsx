@@ -10,9 +10,8 @@ const UserLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleLogout = () => {
-    logout();
+    logout(navigate);
     toast.success('Logged out successfully');
-    navigate('/login');
   };
 
   const menuItems = [

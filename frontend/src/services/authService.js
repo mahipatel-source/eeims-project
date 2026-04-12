@@ -2,15 +2,15 @@ import API from './axios';
 
 const authService = {
   // login user
-  login: async (email, password) => {
-    const response = await API.post('/auth/login', { email, password });
-    return response.data;
+  login: async (email, password, role = null) => {
+    const response = await API.post('/auth/login', { email, password, role });
+    return response;
   },
 
   // get logged in user
   getMe: async () => {
     const response = await API.get('/auth/me');
-    return response.data;
+    return response;
   },
 
   // logout

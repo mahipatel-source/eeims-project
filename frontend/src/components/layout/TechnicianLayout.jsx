@@ -7,16 +7,19 @@ const TechnicianLayout = ({ children }) => {
       <Sidebar />
       <div style={{
         flex: 1,
-        marginLeft: '250px',
-        marginTop: '4rem'
+        marginLeft: 'var(--sidebar-width)',
+        marginTop: 'var(--topbar-height)',
+        minWidth: 0,
       }}>
         <Navbar />
         <main style={{
-          padding: '2rem',
+          padding: '1.75rem',
           backgroundColor: 'var(--light)',
-          minHeight: 'calc(100vh - 4rem)'
+          minHeight: 'calc(100vh - var(--topbar-height))'
         }}>
-          {children}
+          <div style={{ width: '100%', maxWidth: 'var(--content-max-width)', margin: '0 auto' }}>
+            {children}
+          </div>
         </main>
       </div>
     </div>

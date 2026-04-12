@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
 // login user
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // validate required fields
     if (!email || !password) {
@@ -54,6 +54,15 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // validate role if provided
+    if (role) {
+      const requestedRole = role.toLowerCase().trim();
+      const userRole = user.role.toLowerCase().trim();
+      if (requestedRole !== userRole) {
+        return res.status(403).json({ success: false, message: `Invalid credentials for ${role} login` });
+      }
     }
 
     // generate JWT token

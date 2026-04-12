@@ -8,36 +8,64 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
   const { login, user } = useAuth();
   const navigate = useNavigate();
 
+  const navigateByRole = (role) => {
+    const normalizedRole = typeof role === 'string' ? role.trim().toLowerCase() : role;
+    if (normalizedRole === 'employee') navigate('/user/dashboard', { replace: true });
+  };
+
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin') navigate('/admin/dashboard');
-      else if (user.role === 'manager') navigate('/manager/dashboard');
-      else if (user.role === 'technician') navigate('/technician/schedule');
-      else if (user.role === 'employee') navigate('/user/dashboard');
+      if (user.role.toLowerCase() === 'employee') {
+        navigateByRole(user.role);
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
   }, [user, navigate]);
 
+  const validateForm = () => {
+    const newErrors = {};
+    if (!email) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email address';
+    if (!password) newErrors.password = 'Password is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
     try {
       const user = await login(email, password);
+      if (user.role.toLowerCase() !== 'employee') {
+        setPassword('');
+        toast.error(
+          <div>
+            This portal is for employees only.
+            <Link to="/staff-login" style={{ color: '#10b981', marginLeft: '8px', textDecoration: 'underline' }}>
+              Use Staff login
+            </Link>
+          </div>
+        );
+        setIsLoading(false);
+        return;
+      }
       toast.success(`Welcome back, ${user.name}!`);
-
-      if (user.role === 'admin') navigate('/admin/dashboard');
-      else if (user.role === 'manager') navigate('/manager/dashboard');
-      else if (user.role === 'technician') navigate('/technician/schedule');
-      else if (user.role === 'employee') navigate('/user/dashboard');
+      navigateByRole(user.role);
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message || 'Login failed');
+      console.error('Login error:', error);
+      if (error.response?.status === 401) {
+        setErrors({ password: 'Invalid email or password' });
+      } else {
+        toast.error(error.response?.data?.message || 'Login failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -55,51 +83,58 @@ const Login = () => {
             </svg>
           </div>
           <h1 style={styles.brandTitle}>EEIMS</h1>
-          <p style={styles.brandSubtitle}>Electric Equipment Inventory Management System</p>
+          <p style={styles.brandSubtitle}>Employee Self Service Portal</p>
           
           <div style={styles.featureList}>
             <div style={styles.featureItem}>
-              <div style={styles.featureIconBox}>
+              <div style={{...styles.featureIconBox, background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'}}>
                 <svg style={styles.featureIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <span style={styles.featureText}>Track Equipment</span>
+              <span style={styles.featureText}>Browse Available Equipment</span>
             </div>
             <div style={styles.featureItem}>
-              <div style={{...styles.featureIconBox, background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'}}>
+              <div style={{...styles.featureIconBox, background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)'}}>
                 <svg style={styles.featureIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <span style={styles.featureText}>Manage Maintenance</span>
+              <span style={styles.featureText}>Request Equipment Online</span>
             </div>
             <div style={styles.featureItem}>
-              <div style={{...styles.featureIconBox, background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)'}}>
+              <div style={{...styles.featureIconBox, background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'}}>
                 <svg style={styles.featureIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
               </div>
-              <span style={styles.featureText}>Generate Reports</span>
+              <span style={styles.featureText}>Track Request Status</span>
+            </div>
+            <div style={styles.featureItem}>
+              <div style={{...styles.featureIconBox, background: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)'}}>
+                <svg style={styles.featureIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              </div>
+              <span style={styles.featureText}>Return Equipment Easily</span>
             </div>
           </div>
         </div>
         
         <div style={styles.statsSection}>
           <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>4</span>
-            <span style={styles.statsLabel}>User Roles</span>
+            <span style={styles.statsNumber}>Easy</span>
+            <span style={styles.statsLabel}>To Use</span>
           </div>
           <div style={styles.statsDivider}></div>
           <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>100%</span>
-            <span style={styles.statsLabel}>Secure</span>
+            <span style={styles.statsNumber}>Fast</span>
+            <span style={styles.statsLabel}>Approval</span>
           </div>
           <div style={styles.statsDivider}></div>
           <div style={styles.statsItem}>
-            <span style={styles.statsNumber}>24/7</span>
-            <span style={styles.statsLabel}>Active</span>
+            <span style={styles.statsNumber}>Full</span>
+            <span style={styles.statsLabel}>History</span>
           </div>
         </div>
 
@@ -111,14 +146,18 @@ const Login = () => {
           <div style={styles.cardHeader}>
             <div style={styles.cardIconWrapper}>
               <svg style={styles.cardIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <h2 style={styles.cardTitle}>Welcome Back</h2>
-            <p style={styles.cardSubtitle}>Sign in to continue to your dashboard</p>
+            <h2 style={styles.cardTitle}>Employee Sign In</h2>
+            <p style={styles.cardSubtitle}>Access your equipment request portal</p>
           </div>
 
           <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={styles.roleToggle}>
+              <span style={styles.roleLabel}>Employee Login</span>
+            </div>
+
             <div style={styles.inputGroup}>
               <label style={styles.inputLabel}>Email Address</label>
               <div style={styles.inputWrapper}>
@@ -127,13 +166,15 @@ const Login = () => {
                 </svg>
                 <input
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email address"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={styles.input}
+                  onChange={(e) => { setEmail(e.target.value); setErrors({...errors, email: null}); }}
+                  style={{...styles.input, borderColor: errors.email ? '#ef4444' : '#e2e8f0'}}
+                  disabled={isLoading}
                   required
                 />
               </div>
+              {errors.email && <span style={styles.errorText}>{errors.email}</span>}
             </div>
 
             <div style={styles.inputGroup}>
@@ -146,14 +187,16 @@ const Login = () => {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={styles.input}
+                  onChange={(e) => { setPassword(e.target.value); setErrors({...errors, password: null}); }}
+                  style={{...styles.input, borderColor: errors.password ? '#ef4444' : '#e2e8f0'}}
+                  disabled={isLoading}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   style={styles.toggleBtn}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <svg style={styles.eyeIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -167,12 +210,13 @@ const Login = () => {
                   )}
                 </button>
               </div>
+              {errors.password && <span style={styles.errorText}>{errors.password}</span>}
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              style={styles.submitBtn}
+              style={{...styles.submitBtn, opacity: isLoading ? 0.7 : 1}}
             >
               {isLoading ? (
                 <span style={styles.loadingState}>
@@ -194,33 +238,15 @@ const Login = () => {
           </form>
 
           <div style={styles.registerLink}>
-            <p>New employee? <Link to="/register" style={styles.link}>Create Account</Link></p>
+            <div style={styles.divider}>
+              <span style={styles.dividerText}>New employee?</span>
+            </div>
+            <p style={styles.registerText}>Don't have an account? <Link to="/register" style={styles.link}>Create Account</Link></p>
           </div>
 
-          <div style={styles.demoSection}>
-            <p style={styles.demoTitle}>Demo Credentials</p>
-            <div style={styles.credentialsList}>
-              <div style={styles.credentialItem}>
-                <span style={{...styles.roleBadge, background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'}}>Admin</span>
-                <span style={styles.credential}>admin@eeims.com</span>
-                <span style={styles.password}>Admin@123</span>
-              </div>
-              <div style={styles.credentialItem}>
-                <span style={{...styles.roleBadge, background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)'}}>Manager</span>
-                <span style={styles.credential}>manager@eeims.com</span>
-                <span style={styles.password}>Manager@123</span>
-              </div>
-              <div style={styles.credentialItem}>
-                <span style={{...styles.roleBadge, background: 'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)'}}>Technician</span>
-                <span style={styles.credential}>tech@eeims.com</span>
-                <span style={styles.password}>Tech@123</span>
-              </div>
-              <div style={styles.credentialItem}>
-                <span style={{...styles.roleBadge, background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'}}>Employee</span>
-                <span style={styles.credential}>Use /register page</span>
-                <span style={styles.password}>Your password</span>
-              </div>
-            </div>
+          <div style={styles.staffLink}>
+            <span style={styles.staffText}>Are you staff? </span>
+            <Link to="/staff-login" style={styles.staffLinkText}>Admin / Manager / Technician login →</Link>
           </div>
         </div>
       </div>
@@ -241,7 +267,7 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)',
+    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
     zIndex: 0,
   },
   leftSection: {
@@ -264,14 +290,13 @@ const styles = {
     width: '100px',
     height: '100px',
     borderRadius: '28px',
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+    background: 'rgba(255,255,255,0.2)',
     backdropFilter: 'blur(10px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto 2rem',
-    boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
+    border: '1px solid rgba(255,255,255,0.3)',
   },
   logoIcon: {
     width: '48px',
@@ -283,13 +308,10 @@ const styles = {
     fontWeight: '800',
     marginBottom: '0.5rem',
     letterSpacing: '-0.025em',
-    background: 'linear-gradient(135deg, #fff 0%, #e2e8f0 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
   },
   brandSubtitle: {
     fontSize: '1.25rem',
-    opacity: 0.85,
+    opacity: 0.9,
     marginBottom: '3rem',
     fontWeight: 500,
   },
@@ -298,23 +320,23 @@ const styles = {
     flexDirection: 'column',
     gap: '1.25rem',
     marginTop: '1rem',
+    textAlign: 'left',
   },
   featureItem: {
     display: 'flex',
     alignItems: 'center',
     gap: '1rem',
-    fontSize: '1.0625rem',
-    opacity: 0.9,
+    fontSize: '1rem',
+    opacity: 0.95,
   },
   featureIconBox: {
     width: '44px',
     height: '44px',
     borderRadius: '12px',
-    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+    flexShrink: 0,
   },
   featureIcon: {
     width: '22px',
@@ -330,10 +352,10 @@ const styles = {
     gap: '2rem',
     marginTop: '3rem',
     padding: '1.25rem 2rem',
-    background: 'rgba(255, 255, 255, 0.1)',
+    background: 'rgba(255,255,255,0.15)',
     backdropFilter: 'blur(10px)',
     borderRadius: '16px',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
+    border: '1px solid rgba(255,255,255,0.2)',
     position: 'relative',
     zIndex: 2,
   },
@@ -344,20 +366,20 @@ const styles = {
     gap: '0.25rem',
   },
   statsNumber: {
-    fontSize: '1.5rem',
+    fontSize: '1.25rem',
     fontWeight: '800',
     color: 'white',
   },
   statsLabel: {
     fontSize: '0.75rem',
-    opacity: 0.7,
+    opacity: 0.8,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
   statsDivider: {
     width: '1px',
     height: '32px',
-    background: 'rgba(255, 255, 255, 0.2)',
+    background: 'rgba(255,255,255,0.3)',
   },
   wavePattern: {
     position: 'absolute',
@@ -365,7 +387,7 @@ const styles = {
     left: 0,
     right: 0,
     height: '200px',
-    background: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' fill-opacity=\'0.08\' d=\'M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z\'%3E%3C/path%3E%3C/svg%3E")',
+    background: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 1440 320\'%3E%3Cpath fill=\'%23ffffff\' fill-opacity=\'0.1\' d=\'M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z\'%3E%3C/path%3E%3C/svg%3E")',
     backgroundSize: 'cover',
     zIndex: 1,
   },
@@ -381,34 +403,34 @@ const styles = {
   },
   loginCard: {
     width: '100%',
-    maxWidth: '480px',
+    maxWidth: '460px',
     background: 'white',
-    borderRadius: '28px',
-    padding: '2.75rem',
+    borderRadius: '24px',
+    padding: '2.5rem',
     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
     border: '1px solid #e2e8f0',
   },
   cardHeader: {
     textAlign: 'center',
-    marginBottom: '2rem',
+    marginBottom: '1.5rem',
   },
   cardIconWrapper: {
     width: '64px',
     height: '64px',
     borderRadius: '20px',
-    background: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
+    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: '0 auto 1.25rem',
+    margin: '0 auto 1rem',
   },
   cardIcon: {
     width: '32px',
     height: '32px',
-    color: '#6366f1',
+    color: '#2563eb',
   },
   cardTitle: {
-    fontSize: '1.75rem',
+    fontSize: '1.5rem',
     fontWeight: '800',
     color: '#0f172a',
     marginBottom: '0.5rem',
@@ -416,12 +438,12 @@ const styles = {
   },
   cardSubtitle: {
     color: '#64748b',
-    fontSize: '0.9375rem',
+    fontSize: '0.875rem',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '1.25rem',
+    gap: '1rem',
   },
   inputGroup: {
     display: 'flex',
@@ -448,9 +470,9 @@ const styles = {
   },
   input: {
     width: '100%',
-    padding: '1rem 1rem 1rem 3rem',
+    padding: '0.875rem 1rem 0.875rem 3rem',
     border: '2px solid #e2e8f0',
-    borderRadius: '14px',
+    borderRadius: '12px',
     fontSize: '0.9375rem',
     outline: 'none',
     transition: 'all 0.2s',
@@ -473,13 +495,32 @@ const styles = {
     height: '20px',
     color: '#94a3b8',
   },
+  errorText: {
+    color: '#ef4444',
+    fontSize: '0.75rem',
+    fontWeight: 500,
+  },
+  roleToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0.875rem',
+    background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
+    borderRadius: '12px',
+    marginBottom: '0.5rem',
+  },
+  roleLabel: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: '0.9375rem',
+  },
   submitBtn: {
     width: '100%',
     padding: '1rem',
-    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+    background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
     color: 'white',
     border: 'none',
-    borderRadius: '14px',
+    borderRadius: '12px',
     fontSize: '1rem',
     fontWeight: '700',
     cursor: 'pointer',
@@ -488,8 +529,8 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '0.5rem',
-    marginTop: '0.75rem',
-    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+    marginTop: '0.5rem',
+    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
   },
   loadingState: {
     display: 'flex',
@@ -514,68 +555,47 @@ const styles = {
     transition: 'transform 0.2s',
   },
   registerLink: {
-    textAlign: 'center',
     marginTop: '1.5rem',
     paddingTop: '1.5rem',
     borderTop: '1px solid #e2e8f0',
+  },
+  divider: {
+    textAlign: 'center',
+    marginBottom: '1rem',
+    position: 'relative',
+  },
+  dividerText: {
+    background: 'white',
+    padding: '0 1rem',
+    color: '#64748b',
+    fontSize: '0.8125rem',
+    position: 'relative',
+    zIndex: 1,
+  },
+  registerText: {
+    textAlign: 'center',
     color: '#64748b',
     fontSize: '0.9375rem',
   },
   link: {
-    color: '#6366f1',
+    color: '#2563eb',
     fontWeight: '700',
     textDecoration: 'none',
   },
-  demoSection: {
-    marginTop: '1.5rem',
-    padding: '1.25rem',
-    background: '#f8fafc',
-    borderRadius: '16px',
-    border: '1px solid #e2e8f0',
-  },
-  demoTitle: {
-    fontSize: '0.6875rem',
-    fontWeight: '700',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    marginBottom: '1rem',
+  staffLink: {
     textAlign: 'center',
+    marginTop: '1.25rem',
+    paddingTop: '1rem',
+    borderTop: '1px solid #e2e8f0',
   },
-  credentialsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.875rem',
-  },
-  credentialItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    fontSize: '0.8125rem',
-    flexWrap: 'wrap',
-  },
-  roleBadge: {
-    padding: '0.3125rem 0.75rem',
-    borderRadius: '9999px',
-    fontSize: '0.625rem',
-    fontWeight: '700',
-    color: 'white',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    minWidth: '80px',
-    textAlign: 'center',
-  },
-  credential: {
-    color: '#334155',
-    fontFamily: 'monospace',
-    fontSize: '0.75rem',
-    fontWeight: 500,
-  },
-  password: {
+  staffText: {
     color: '#94a3b8',
-    fontFamily: 'monospace',
-    fontSize: '0.6875rem',
-    marginLeft: 'auto',
+    fontSize: '0.75rem',
+  },
+  staffLinkText: {
+    color: '#64748b',
+    fontSize: '0.75rem',
+    textDecoration: 'none',
   },
 };
 

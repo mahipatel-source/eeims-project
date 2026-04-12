@@ -2,13 +2,26 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import authService from '../services/authService';
 
 const AuthContext = createContext();
+const normalizeRole = (role) => (typeof role === 'string' ? role.trim().toLowerCase() : role);
+const normalizeUser = (value) => (
+  value
+    ? { ...value, role: normalizeRole(value.role) }
+    : value
+);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      return saved && saved !== 'undefined' ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(() => {
+    const t = localStorage.getItem('token');
+    return t && t !== 'undefined' ? t : null;
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   // load user on app start
@@ -16,19 +29,30 @@ export const AuthProvider = ({ children }) => {
     const loadUser = async () => {
       const savedToken = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
-      
-      if (savedToken && savedUser) {
-        // First set user from localStorage immediately to prevent flash
-        setUser(JSON.parse(savedUser));
+
+      if (savedToken && savedUser && savedUser !== 'undefined') {
+        let parsedUser;
+        try {
+          parsedUser = normalizeUser(JSON.parse(savedUser));
+        } catch {
+          parsedUser = null;
+        }
+        if (!parsedUser) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setIsLoading(false);
+          return;
+        }
+
+        setUser(parsedUser);
         setToken(savedToken);
-        
-        // Then verify with server
+
         try {
           const response = await authService.getMe();
-          setUser(response.data.data);
-          localStorage.setItem('user', JSON.stringify(response.data.data));
+          const normalizedUser = normalizeUser(response.data.data);
+          setUser(normalizedUser);
+          localStorage.setItem('user', JSON.stringify(normalizedUser));
         } catch (err) {
-          console.log('Token validation failed, clearing session');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           setUser(null);
@@ -42,26 +66,34 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // login function
-  const login = async (email, password) => {
-    const response = await authService.login(email, password);
-    const { token, user } = response.data;
+  const login = async (email, password, role = null) => {
+    const response = await authService.login(email, password, role);
+    const { token, user } = response.data.data;
+    const normalizedUser = normalizeUser(user);
 
-    // save to localStorage
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
 
     setToken(token);
-    setUser(user);
+    setUser(normalizedUser);
 
-    return user;
+    return normalizedUser;
   };
 
   // logout function
-  const logout = () => {
+  const logout = (navigate) => {
+    const userRole = user?.role;
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
     setToken(null);
+    if (navigate) {
+      if (userRole?.toLowerCase() === 'employee') {
+        navigate('/login');
+      } else {
+        navigate('/staff-login');
+      }
+    }
   };
 
   return (

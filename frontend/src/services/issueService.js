@@ -50,6 +50,11 @@ const issueService = {
     const response = await API.put(`/issues/${id}/return`);
     return response.data;
   },
+
+  return: async (id) => {
+    const response = await API.put(`/issues/${id}/return`);
+    return response.data;
+  },
 };
 
 export default issueService;

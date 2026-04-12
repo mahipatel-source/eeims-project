@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../../../components/layout/AdminLayout';
 import locationService from '../../../services/locationService';
+import equipmentService from '../../../services/equipmentService';
+import Modal from '../../../components/ui/Modal';
+import EmptyState from '../../../components/ui/EmptyState';
+import Loader from '../../../components/ui/Loader';
 import toast from 'react-hot-toast';
 
 const Locations = () => {
   const [locations, setLocations] = useState([]);
+  const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -22,8 +27,12 @@ const Locations = () => {
   const loadLocations = async () => {
     try {
       setLoading(true);
-      const response = await locationService.getAll();
-      setLocations(response.data || []);
+      const [locationResponse, equipmentResponse] = await Promise.all([
+        locationService.getAll(),
+        equipmentService.getAll(),
+      ]);
+      setLocations(locationResponse.data || []);
+      setEquipment(equipmentResponse.data || []);
     } catch (error) {
       console.error('Error loading locations:', error);
       toast.error('Failed to load locations');
@@ -149,65 +158,6 @@ const Locations = () => {
     setSelectedLocation(null);
   };
 
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000
-      }}>
-        <div style={{
-          backgroundColor: 'var(--white)',
-          borderRadius: 'var(--radius)',
-          padding: '2rem',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '90vh',
-          overflow: 'auto',
-          boxShadow: 'var(--shadow)'
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1.5rem'
-          }}>
-            <h3 style={{
-              margin: 0,
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              color: '#111827'
-            }}>
-              {title}
-            </h3>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1.5rem',
-                cursor: 'pointer',
-                color: '#6b7280'
-              }}
-            >
-              ×
-            </button>
-          </div>
-          {children}
-        </div>
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <AdminLayout>
@@ -217,7 +167,7 @@ const Locations = () => {
           alignItems: 'center',
           height: '50vh'
         }}>
-          <div>Loading locations...</div>
+          <Loader text="Loading locations..." />
         </div>
       </AdminLayout>
     );
@@ -306,24 +256,26 @@ const Locations = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ backgroundColor: 'var(--light)' }}>
                 <tr>
+                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>#</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Name</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Description</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Created</th>
+                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Equipment Count</th>
                   <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredLocations.length > 0 ? (
-                  filteredLocations.map((location) => (
-                    <tr key={location.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  filteredLocations.map((location, index) => (
+                    <tr key={location.id} style={{ borderBottom: '1px solid var(--border)', backgroundColor: index % 2 ? '#fcfdff' : '#ffffff' }}>
+                      <td style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>{index + 1}</td>
                       <td style={{ padding: '1rem' }}>
                         <div style={{ fontWeight: '500', color: '#111827' }}>{location.name}</div>
                       </td>
                       <td style={{ padding: '1rem', color: '#6b7280' }}>
                         {location.description || 'No description'}
                       </td>
-                      <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>
-                        {new Date(location.createdAt).toLocaleDateString()}
+                      <td style={{ padding: '1rem', textAlign: 'center', color: '#111827', fontWeight: '600' }}>
+                        {equipment.filter((item) => item.locationId === location.id).length}
                       </td>
                       <td style={{ padding: '1rem', textAlign: 'center' }}>
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
@@ -363,13 +315,11 @@ const Locations = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" style={{
-                      padding: '3rem',
-                      textAlign: 'center',
-                      color: '#6b7280',
-                      fontStyle: 'italic'
-                    }}>
-                      {searchTerm ? 'No locations found matching your search.' : 'No locations found.'}
+                    <td colSpan="5" style={{ padding: '1.5rem' }}>
+                      <EmptyState
+                        title={searchTerm ? 'No locations found' : 'No locations found'}
+                        description={searchTerm ? 'Try a different search term.' : 'Add your first location to organize equipment.'}
+                      />
                     </td>
                   </tr>
                 )}

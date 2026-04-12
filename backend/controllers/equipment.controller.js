@@ -111,13 +111,13 @@ exports.updateEquipment = async (req, res) => {
     const { name, description, categoryId, locationId, quantity, condition, minimumStock } = req.body;
 
     await equipment.update({
-      name: name || equipment.name,
-      description: description || equipment.description,
-      categoryId: categoryId || equipment.categoryId,
-      locationId: locationId || equipment.locationId,
+      name: name !== undefined ? name : equipment.name,
+      description: description !== undefined ? description : equipment.description,
+      categoryId: categoryId !== undefined ? categoryId : equipment.categoryId,
+      locationId: locationId !== undefined ? locationId : equipment.locationId,
       quantity: quantity !== undefined ? quantity : equipment.quantity,
-      condition: condition || equipment.condition,
-      minimumStock: minimumStock || equipment.minimumStock,
+      condition: condition !== undefined ? condition : equipment.condition,
+      minimumStock: minimumStock !== undefined ? minimumStock : equipment.minimumStock,
       updatedBy: req.user.id,
     });
 

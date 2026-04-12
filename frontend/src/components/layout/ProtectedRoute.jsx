@@ -20,6 +20,13 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!user) {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/admin') || currentPath.startsWith('/manager') || currentPath.startsWith('/technician')) {
+      return <Navigate to="/staff-login" replace />;
+    }
+    if (currentPath.startsWith('/user')) {
+      return <Navigate to="/login" replace />;
+    }
     return <Navigate to="/login" replace />;
   }
 

@@ -1,17 +1,36 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import alertService from '../../services/alertService';
 
 const Sidebar = () => {
   const { logout, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+
+    const loadUnreadCount = async () => {
+      try {
+        const response = await alertService.getUnreadCount();
+        setUnreadCount(response.data?.count || 0);
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+
+    loadUnreadCount();
+  }, [user?.role, location.pathname]);
 
   const menuItems = user?.role === 'manager' ? [
     { path: '/manager/dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-    { path: '/manager/equipment', label: 'Equipment', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
-    { path: '/manager/issue-part', label: 'Pending Requests', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-    { path: '/manager/issue-equipment', label: 'Issue Equipment', icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z' },
+    { path: '/manager/equipment-view', label: 'Equipment', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+    { path: '/manager/pending-requests', label: 'Pending Requests', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+    { path: '/manager/issue-part', label: 'Issue Equipment', icon: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z' },
     { path: '/manager/issue-history', label: 'Issue History', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { path: '/admin/reports', label: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+    { path: '/manager/reports', label: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   ] : user?.role === 'technician' ? [
     { path: '/technician/schedule', label: 'My Schedule', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
     { path: '/technician/log-maintenance', label: 'Log Maintenance', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
@@ -28,8 +47,9 @@ const Sidebar = () => {
     { path: '/admin/categories', label: 'Categories', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' },
     { path: '/admin/locations', label: 'Locations', icon: 'M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z' },
     { path: '/admin/users', label: 'Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
+    { path: '/admin/employees', label: 'Employees', icon: 'M17 20h5V10L12 4 2 10v10h5m10 0v-6a5 5 0 00-10 0v6m10 0H7' },
     { path: '/admin/maintenance', label: 'Maintenance', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
-    { path: '/admin/alerts', label: 'Alerts', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
+    { path: '/admin/alerts', label: 'Alerts', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', badge: unreadCount },
     { path: '/admin/reports', label: 'Reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   ];
 
@@ -37,10 +57,10 @@ const Sidebar = () => {
 
   const getRoleColor = () => {
     switch (user?.role) {
-      case 'admin': return 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
-      case 'manager': return 'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)';
-      case 'technician': return 'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)';
-      case 'employee': return 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
+      case 'admin': return 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)';
+      case 'manager': return 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)';
+      case 'technician': return 'linear-gradient(135deg, #0f766e 0%, #115e59 100%)';
+      case 'employee': return 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)';
       default: return 'linear-gradient(135deg, #6b7280 0%, #9ca3af 100%)';
     }
   };
@@ -51,6 +71,10 @@ const Sidebar = () => {
         <path strokeLinecap="round" strokeLinejoin="round" d={path} />
       </svg>
     );
+  };
+
+  const handleLogout = () => {
+    logout(navigate);
   };
 
   return (
@@ -96,13 +120,18 @@ const Sidebar = () => {
               {renderIcon(item.icon)}
             </span>
             <span style={styles.navText}>{item.label}</span>
+            {item.badge > 0 && (
+              <span style={styles.navBadge}>
+                {item.badge > 99 ? '99+' : item.badge}
+              </span>
+            )}
             {isActive(item.path) && <div style={styles.activeIndicator}></div>}
           </Link>
         ))}
       </nav>
 
       <div style={styles.logoutSection}>
-        <button onClick={logout} style={styles.logoutBtn}>
+        <button onClick={handleLogout} style={styles.logoutBtn}>
           <svg style={styles.logoutIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
@@ -115,7 +144,7 @@ const Sidebar = () => {
 
 const styles = {
   sidebar: {
-    width: '280px',
+    width: 'var(--sidebar-width)',
     height: '100vh',
     display: 'flex',
     flexDirection: 'column',
@@ -139,7 +168,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '0.875rem',
-    padding: '1.75rem 1.5rem',
+    minHeight: 'var(--topbar-height)',
+    padding: '1.125rem 1.25rem',
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
     position: 'relative',
     zIndex: 1,
@@ -161,6 +191,7 @@ const styles = {
   },
   logoText: {
     color: 'white',
+    minWidth: 0,
   },
   brandName: {
     fontSize: '1.5rem',
@@ -176,12 +207,13 @@ const styles = {
     margin: 0,
     opacity: 0.6,
     fontWeight: 500,
+    lineHeight: 1.3,
   },
   profileSection: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.875rem',
-    padding: '1.25rem 1.5rem',
+    padding: '1rem 1.25rem',
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
     background: 'rgba(255, 255, 255, 0.05)',
     position: 'relative',
@@ -201,6 +233,7 @@ const styles = {
   },
   userInfo: {
     flex: 1,
+    minWidth: 0,
   },
   userName: {
     color: 'white',
@@ -208,6 +241,9 @@ const styles = {
     fontWeight: '600',
     margin: 0,
     marginBottom: '0.25rem',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   roleBadge: {
     display: 'inline-block',
@@ -221,7 +257,7 @@ const styles = {
   },
   nav: {
     flex: 1,
-    padding: '1.25rem 0.875rem',
+    padding: '1rem 0.875rem',
     overflowY: 'auto',
     position: 'relative',
     zIndex: 1,
@@ -238,7 +274,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '0.875rem',
-    padding: '0.875rem 1rem',
+    minHeight: '46px',
+    padding: '0.75rem 0.95rem',
     borderRadius: '12px',
     color: 'rgba(255, 255, 255, 0.65)',
     textDecoration: 'none',
@@ -266,6 +303,7 @@ const styles = {
   navText: {
     fontSize: '0.875rem',
     fontWeight: 500,
+    lineHeight: 1.2,
   },
   activeIndicator: {
     position: 'absolute',
@@ -278,8 +316,22 @@ const styles = {
     borderRadius: '4px',
     boxShadow: '0 0 12px rgba(129, 140, 248, 0.5)',
   },
+  navBadge: {
+    marginLeft: 'auto',
+    minWidth: '22px',
+    height: '22px',
+    borderRadius: '9999px',
+    backgroundColor: '#dc2626',
+    color: '#fff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '0.6875rem',
+    fontWeight: '700',
+    padding: '0 0.4rem',
+  },
   logoutSection: {
-    padding: '1.25rem',
+    padding: '1rem 1.125rem 1.125rem',
     borderTop: '1px solid rgba(255, 255, 255, 0.1)',
     position: 'relative',
     zIndex: 1,

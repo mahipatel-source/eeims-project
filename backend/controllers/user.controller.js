@@ -55,13 +55,17 @@ exports.createUser = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email already exists' });
     }
 
+    if (!['manager', 'technician'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Role must be manager or technician' });
+    }
+
     // hash password
     const hashed = await bcrypt.hash(password, 10);
     const user = await User.create({
       name,
       email,
       password: hashed,
-      role: role || 'manager',
+      role,
       createdBy: req.user.id,
       updatedBy: req.user.id,
     });

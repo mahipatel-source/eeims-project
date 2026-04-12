@@ -280,7 +280,7 @@ exports.getIssuesByUser = async (req, res) => {
 // manager directly issues equipment without approval
 exports.directIssue = async (req, res) => {
   try {
-    const { equipmentId, userId, quantity, remarks } = req.body;
+    const { equipmentId, userId, quantity, remarks, requestedReturnDate } = req.body;
 
     if (!equipmentId || !userId || !quantity) {
       return res.status(400).json({ success: false, message: 'Equipment, user and quantity are required' });
@@ -303,6 +303,7 @@ exports.directIssue = async (req, res) => {
       userId,
       quantity,
       remarks,
+      requestedReturnDate: requestedReturnDate || null,
       status: 'issued',
       issueDate: new Date(),
       createdBy: req.user.id,
@@ -314,7 +315,7 @@ exports.directIssue = async (req, res) => {
       updatedBy: req.user.id,
     });
 
-    if (equipment.quantity <= equipment.minimumStock) {
+    if (equipment.quantity - quantity <= equipment.minimumStock) {
       const { Alert } = require('../models');
       const existingAlert = await Alert.findOne({
         where: { equipmentId: equipment.id, type: 'low_stock', isRead: false },
@@ -323,7 +324,7 @@ exports.directIssue = async (req, res) => {
       if (!existingAlert) {
         await Alert.create({
           type: 'low_stock',
-          message: `Low stock alert: ${equipment.name} has only ${equipment.quantity} units remaining`,
+          message: `Low stock alert: ${equipment.name} has only ${equipment.quantity - quantity} units remaining`,
           equipmentId: equipment.id,
           createdBy: req.user.id,
           updatedBy: req.user.id,

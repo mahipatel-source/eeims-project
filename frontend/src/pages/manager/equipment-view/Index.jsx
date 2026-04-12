@@ -12,9 +12,8 @@ const ManagerEquipmentView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
+  const [filterCondition, setFilterCondition] = useState('');
   const [loading, setLoading] = useState(true);
-  const [selectedEquipment, setSelectedEquipment] = useState(null);
-  const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -41,31 +40,40 @@ const ManagerEquipmentView = () => {
   };
 
   const filteredEquipment = equipment.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = !filterCategory || item.categoryId === parseInt(filterCategory);
     const matchesLocation = !filterLocation || item.locationId === parseInt(filterLocation);
-    return matchesSearch && matchesCategory && matchesLocation;
+    const matchesCondition = !filterCondition || item.condition === filterCondition;
+    return matchesSearch && matchesCategory && matchesLocation && matchesCondition;
   });
 
   const getCategoryName = (categoryId) => categories.find(c => c.id === categoryId)?.name || 'N/A';
   const getLocationName = (locationId) => locations.find(l => l.id === locationId)?.name || 'N/A';
 
-  const openDetailModal = (item) => {
-    setSelectedEquipment(item);
-    setShowDetail(true);
+  const getConditionBadge = (condition) => {
+    const styles = {
+      good: { bg: '#dcfce7', color: '#166534', label: 'Good' },
+      fair: { bg: '#fef3c7', color: '#92400e', label: 'Fair' },
+      poor: { bg: '#fee2e2', color: '#991b1b', label: 'Poor' },
+    };
+    const s = styles[condition] || styles.good;
+    return <span style={{ padding: '0.25rem 0.625rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: '600', background: s.bg, color: s.color }}>{s.label}</span>;
   };
 
-  const closeDetailModal = () => {
-    setShowDetail(false);
-    setSelectedEquipment(null);
+  const getStockStatus = (item) => {
+    const isLow = item.quantity <= item.minimumStock;
+    const isOut = item.quantity === 0;
+    if (isOut) return { text: 'Out of Stock', bg: '#fee2e2', color: '#991b1b' };
+    if (isLow) return { text: 'Low Stock', bg: '#fef3c7', color: '#92400e' };
+    return { text: 'In Stock', bg: '#dcfce7', color: '#166534' };
   };
 
   if (loading) {
     return (
       <ManagerLayout>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-          <div style={{ fontSize: '1.125rem', color: '#6b7280' }}>Loading equipment...</div>
+          <div style={{ fontSize: '1.125rem', color: '#64748b' }}>Loading equipment...</div>
         </div>
       </ManagerLayout>
     );
@@ -76,21 +84,21 @@ const ManagerEquipmentView = () => {
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{
           fontSize: '2rem',
-          fontWeight: '700',
-          color: '#111827',
-          marginBottom: '0.5rem'
-        }}>Equipment View</h1>
-        <p style={{ color: '#6b7280' }}>View all equipment and their details</p>
+          fontWeight: '800',
+          color: '#0f172a',
+          marginBottom: '0.5rem',
+          letterSpacing: '-0.025em'
+        }}>Equipment Inventory</h1>
+        <p style={{ color: '#64748b', fontSize: '0.9375rem' }}>View current stock levels (Read-only)</p>
       </div>
 
-      {/* Filters */}
       <div style={{
-        backgroundColor: 'var(--white)',
-        borderRadius: 'var(--radius)',
+        background: 'var(--white)',
+        borderRadius: 'var(--radius-xl)',
         padding: '1.5rem',
-        boxShadow: 'var(--shadow)',
-        border: '1px solid var(--border)',
-        marginBottom: '2rem'
+        boxShadow: 'var(--shadow-md)',
+        border: '1px solid var(--border-light)',
+        marginBottom: '1.5rem'
       }}>
         <div style={{
           display: 'grid',
@@ -100,22 +108,24 @@ const ManagerEquipmentView = () => {
           <div>
             <label style={{
               display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: '#374151',
+              fontSize: '0.8125rem',
+              fontWeight: '600',
+              color: '#475569',
               marginBottom: '0.5rem'
-            }}>Search</label>
+            }}>Search Equipment</label>
             <input
               type="text"
-              placeholder="Equipment name or serial..."
+              placeholder="Search by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                fontSize: '0.875rem'
+                border: '2px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.875rem',
+                outline: 'none',
+                transition: 'border-color 0.2s'
               }}
             />
           </div>
@@ -123,9 +133,9 @@ const ManagerEquipmentView = () => {
           <div>
             <label style={{
               display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: '#374151',
+              fontSize: '0.8125rem',
+              fontWeight: '600',
+              color: '#475569',
               marginBottom: '0.5rem'
             }}>Category</label>
             <select
@@ -134,9 +144,11 @@ const ManagerEquipmentView = () => {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                fontSize: '0.875rem'
+                border: '2px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.875rem',
+                outline: 'none',
+                background: 'white'
               }}
             >
               <option value="">All Categories</option>
@@ -149,9 +161,9 @@ const ManagerEquipmentView = () => {
           <div>
             <label style={{
               display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: '#374151',
+              fontSize: '0.8125rem',
+              fontWeight: '600',
+              color: '#475569',
               marginBottom: '0.5rem'
             }}>Location</label>
             <select
@@ -160,9 +172,11 @@ const ManagerEquipmentView = () => {
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                fontSize: '0.875rem'
+                border: '2px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.875rem',
+                outline: 'none',
+                background: 'white'
               }}
             >
               <option value="">All Locations</option>
@@ -171,256 +185,156 @@ const ManagerEquipmentView = () => {
               ))}
             </select>
           </div>
-        </div>
-      </div>
 
-      {/* Equipment Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '1.5rem'
-      }}>
-        {filteredEquipment.length > 0 ? (
-          filteredEquipment.map((item) => (
-            <div key={item.id} style={{
-              backgroundColor: 'var(--white)',
-              borderRadius: 'var(--radius)',
-              boxShadow: 'var(--shadow)',
-              border: '1px solid var(--border)',
-              overflow: 'hidden',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow)';
-            }}
-            onClick={() => openDetailModal(item)}
+          <div>
+            <label style={{
+              display: 'block',
+              fontSize: '0.8125rem',
+              fontWeight: '600',
+              color: '#475569',
+              marginBottom: '0.5rem'
+            }}>Condition</label>
+            <select
+              value={filterCondition}
+              onChange={(e) => setFilterCondition(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid var(--border-light)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.875rem',
+                outline: 'none',
+                background: 'white'
+              }}
             >
-              <div style={{
-                padding: '1.5rem',
-                borderBottom: '1px solid var(--border)',
-                backgroundColor: item.quantity <= item.minimumStock ? '#fef2f2' : 'var(--white)'
-              }}>
-                <h3 style={{
-                  fontSize: '1.125rem',
-                  fontWeight: '600',
-                  color: '#111827',
-                  marginBottom: '0.5rem'
-                }}>{item.name}</h3>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  marginBottom: '0.75rem'
-                }}>SN: {item.serialNumber}</p>
-
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  marginBottom: '1rem'
-                }}>
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    backgroundColor: '#dbeafe',
-                    color: '#0c4a6e',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '600'
-                  }}>{getCategoryName(item.categoryId)}</span>
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    backgroundColor: '#d1fae5',
-                    color: '#065f46',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '600'
-                  }}>{getLocationName(item.locationId)}</span>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Stock Level</p>
-                    <p style={{
-                      fontSize: '1.5rem',
-                      fontWeight: '700',
-                      color: item.quantity <= item.minimumStock ? '#dc2626' : '#111827'
-                    }}>{item.quantity}</p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>Minimum</p>
-                    <p style={{ fontSize: '1.125rem', fontWeight: '600', color: '#6b7280' }}>{item.minimumStock}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ padding: '1rem', backgroundColor: '#f9fafb' }}>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#6b7280',
-                  marginBottom: '0.5rem'
-                }}>Condition: <span style={{ fontWeight: '600', color: '#111827' }}>{item.condition}</span></p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openDetailModal(item);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    backgroundColor: '#2563eb',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  View Details
-                </button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div style={{
-            gridColumn: '1 / -1',
-            padding: '3rem',
-            textAlign: 'center',
-            color: '#6b7280'
-          }}>
-            <p style={{ fontSize: '1.125rem' }}>No equipment found matching your filters.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Detail Modal */}
-      {showDetail && selectedEquipment && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }} onClick={closeDetailModal}>
-          <div style={{
-            backgroundColor: 'var(--white)',
-            borderRadius: 'var(--radius)',
-            padding: '2rem',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflowY: 'auto'
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ marginBottom: '2rem' }}>
-              <h2 style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: '#111827',
-                marginBottom: '1rem'
-              }}>{selectedEquipment.name}</h2>
-
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1.5rem'
-              }}>
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Serial Number</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{selectedEquipment.serialNumber}</p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Category</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{getCategoryName(selectedEquipment.categoryId)}</p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Location</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{getLocationName(selectedEquipment.locationId)}</p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Condition</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{selectedEquipment.condition}</p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Current Stock</p>
-                  <p style={{
-                    fontSize: '1.5rem',
-                    fontWeight: '700',
-                    color: selectedEquipment.quantity <= selectedEquipment.minimumStock ? '#dc2626' : '#16a34a'
-                  }}>{selectedEquipment.quantity}</p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Minimum Stock</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>{selectedEquipment.minimumStock}</p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Purchase Date</p>
-                  <p style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
-                    {new Date(selectedEquipment.purchaseDate).toLocaleDateString()}
-                  </p>
-                </div>
-
-                <div>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Status</p>
-                  <p style={{
-                    display: 'inline-block',
-                    padding: '0.25rem 0.75rem',
-                    backgroundColor: selectedEquipment.quantity <= selectedEquipment.minimumStock ? '#fee2e2' : '#dcfce7',
-                    color: selectedEquipment.quantity <= selectedEquipment.minimumStock ? '#991b1b' : '#166534',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.875rem',
-                    fontWeight: '600'
-                  }}>
-                    {selectedEquipment.quantity <= selectedEquipment.minimumStock ? 'Low Stock' : 'In Stock'}
-                  </p>
-                </div>
-              </div>
-
-              {selectedEquipment.notes && (
-                <div style={{ marginTop: '1.5rem' }}>
-                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.25rem' }}>Notes</p>
-                  <p style={{ fontSize: '0.95rem', color: '#111827', backgroundColor: '#f9fafb', padding: '0.75rem', borderRadius: '0.25rem' }}>
-                    {selectedEquipment.notes}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                onClick={closeDetailModal}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  backgroundColor: '#e5e7eb',
-                  color: '#111827',
-                  border: 'none',
-                  borderRadius: 'var(--radius)',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Close
-              </button>
-            </div>
+              <option value="">All Conditions</option>
+              <option value="good">Good</option>
+              <option value="fair">Fair</option>
+              <option value="poor">Poor</option>
+            </select>
           </div>
         </div>
-      )}
+      </div>
+
+      <div style={{
+        background: 'var(--white)',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: 'var(--shadow-md)',
+        border: '1px solid var(--border-light)',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          padding: '1rem 1.5rem',
+          borderBottom: '1px solid var(--border-light)',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h3 style={{
+            margin: 0,
+            fontSize: '1rem',
+            fontWeight: '700',
+            color: '#0f172a'
+          }}>
+            Equipment List ({filteredEquipment.length})
+          </h3>
+          <span style={{
+            fontSize: '0.75rem',
+            color: '#64748b',
+            fontWeight: '500'
+          }}>
+            View Only - No Editing
+          </span>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead style={{ background: '#f8fafc' }}>
+              <tr>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>#</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Equipment</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Location</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Available Qty</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Min Stock</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Condition</th>
+                <th style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.6875rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredEquipment.length > 0 ? (
+                filteredEquipment.map((item, index) => {
+                  const stockStatus = getStockStatus(item);
+                  const isLowStock = item.quantity <= item.minimumStock;
+                  return (
+                    <tr key={item.id} style={{
+                      borderBottom: '1px solid var(--border-light)',
+                      background: isLowStock ? '#fef2f2' : 'transparent',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={e => !isLowStock && (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => e.currentTarget.style.background = isLowStock ? '#fef2f2' : 'transparent'}
+                    >
+                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.875rem', color: '#94a3b8', fontWeight: '600' }}>
+                        {index + 1}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem' }}>
+                        <p style={{ fontWeight: '600', color: '#0f172a', margin: 0, fontSize: '0.9375rem' }}>{item.name}</p>
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.875rem', color: '#475569' }}>
+                        {getCategoryName(item.categoryId)}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', fontSize: '0.875rem', color: '#475569' }}>
+                        {getLocationName(item.locationId)}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
+                        <span style={{
+                          fontSize: '1rem',
+                          fontWeight: '700',
+                          color: isLowStock ? '#dc2626' : '#0f172a'
+                        }}>
+                          {item.quantity}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'center', fontSize: '0.875rem', color: '#64748b' }}>
+                        {item.minimumStock}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
+                        {getConditionBadge(item.condition)}
+                      </td>
+                      <td style={{ padding: '0.875rem 1rem', textAlign: 'center' }}>
+                        <span style={{
+                          padding: '0.25rem 0.625rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.6875rem',
+                          fontWeight: '600',
+                          background: stockStatus.bg,
+                          color: stockStatus.color
+                        }}>
+                          {stockStatus.text}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="8" style={{
+                    padding: '3rem',
+                    textAlign: 'center',
+                    color: '#64748b'
+                  }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📦</div>
+                    <p style={{ fontSize: '1rem', fontWeight: '500' }}>No equipment found</p>
+                    <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>Try adjusting your filters</p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </ManagerLayout>
   );
 };

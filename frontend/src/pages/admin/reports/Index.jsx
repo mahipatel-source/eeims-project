@@ -1,552 +1,286 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import AdminLayout from '../../../components/layout/AdminLayout';
-import equipmentService from '../../../services/equipmentService';
 import reportService from '../../../services/reportService';
-import maintenanceService from '../../../services/maintenanceService';
-import issueService from '../../../services/issueService';
+import Badge from '../../../components/ui/Badge';
+import EmptyState from '../../../components/ui/EmptyState';
+import Loader from '../../../components/ui/Loader';
 import toast from 'react-hot-toast';
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState('inventory');
   const [loading, setLoading] = useState(true);
-  const [reportData, setReportData] = useState({
-    inventory: [],
-    lowStock: [],
-    maintenance: [],
-    issues: []
-  });
-  const [filters, setFilters] = useState({
-    maintenanceStatus: '',
-    issueStartDate: '',
-    issueEndDate: ''
-  });
+  const [inventory, setInventory] = useState([]);
+  const [issues, setIssues] = useState([]);
+  const [maintenance, setMaintenance] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const [issueFilters, setIssueFilters] = useState({ startDate: '', endDate: '' });
+  const [maintenanceStatus, setMaintenanceStatus] = useState('');
 
   useEffect(() => {
-    loadReportData();
+    loadReports();
   }, []);
 
-  const loadReportData = async () => {
+  const loadReports = async () => {
     try {
       setLoading(true);
-      const [inventoryRes, maintenanceRes, issuesRes] = await Promise.all([
-        equipmentService.getAll(),
-        maintenanceService.getAll(),
-        issueService.getAll()
+      const [inventoryRes, issuesRes, maintenanceRes, lowStockRes] = await Promise.all([
+        reportService.getInventory(),
+        reportService.getIssues(),
+        reportService.getMaintenance(),
+        reportService.getLowStock(),
       ]);
 
-      console.log('Inventory Response:', inventoryRes);
-      console.log('Maintenance Response:', maintenanceRes);
-      console.log('Issues Response:', issuesRes);
-
-      const inventory = inventoryRes.data || inventoryRes || [];
-      const lowStockItems = inventory.filter(item => item.quantity <= item.minimumStock);
-      const maintenance = maintenanceRes.data || maintenanceRes || [];
-      const issues = issuesRes.data || issuesRes || [];
-
-      setReportData({
-        inventory,
-        lowStock: lowStockItems,
-        maintenance,
-        issues
-      });
+      setInventory(inventoryRes.data || []);
+      setIssues(issuesRes.data || []);
+      setMaintenance(maintenanceRes.data || []);
+      setLowStock(lowStockRes.data || []);
     } catch (error) {
       console.error('Error loading reports:', error);
-      toast.error('Failed to load reports: ' + error.message);
-      setReportData({
-        inventory: [],
-        lowStock: [],
-        maintenance: [],
-        issues: []
-      });
+      toast.error('Failed to load reports');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredMaintenance = reportData.maintenance.filter(item => {
-    const matchesStatus = !filters.maintenanceStatus || item.status === filters.maintenanceStatus;
-    return matchesStatus;
-  });
-
-  const filteredIssues = reportData.issues.filter(item => {
-    let matchesDate = true;
-    if (filters.issueStartDate) {
-      matchesDate = new Date(item.createdAt) >= new Date(filters.issueStartDate);
+  const loadIssueReport = async () => {
+    try {
+      const response = await reportService.getIssues(issueFilters.startDate, issueFilters.endDate);
+      setIssues(response.data || []);
+    } catch (error) {
+      toast.error('Failed to filter issue report');
     }
-    if (filters.issueEndDate && matchesDate) {
-      matchesDate = new Date(item.createdAt) <= new Date(filters.issueEndDate);
-    }
-    return matchesDate;
-  });
-
-  const exportToCSV = (data, filename) => {
-    const headers = Object.keys(data[0] || {});
-    const csv = [
-      headers.join(','),
-      ...data.map(row =>
-        headers.map(header => {
-          const value = row[header];
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
-          }
-          return value;
-        }).join(',')
-      )
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-    toast.success('Report exported successfully');
   };
 
-  const InventoryReport = () => (
-    <div>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem'
-      }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>
-          Equipment Inventory Report ({reportData.inventory.length} items)
-        </h3>
-        <button
-          onClick={() => exportToCSV(reportData.inventory, 'inventory-report')}
-          style={{
-            backgroundColor: '#10b981',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            borderRadius: '0.375rem',
-            border: 'none',
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-        >
-          Export CSV
-        </button>
-      </div>
+  const loadMaintenanceReport = async (status) => {
+    try {
+      const response = await reportService.getMaintenance(status);
+      setMaintenance(response.data || []);
+    } catch (error) {
+      toast.error('Failed to filter maintenance report');
+    }
+  };
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: 'var(--light)' }}>
-            <tr>
-              <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment Name</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Category</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Current Stock</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Minimum Stock</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Condition</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportData.inventory.map(item => (
-              <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '1rem', color: '#111827', fontWeight: '500' }}>{item.name}</td>
-                <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>{item.Category?.name}</td>
-                <td style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#111827' }}>
-                  {item.quantity}
-                </td>
-                <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>{item.minimumStock}</td>
-                <td style={{ padding: '1rem', textAlign: 'center' }}>
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    backgroundColor: item.quantity > item.minimumStock ? '#dbeafe' : '#fee2e2',
-                    color: item.quantity > item.minimumStock ? '#0c4a6e' : '#7f1d1d'
-                  }}>
-                    {item.quantity > item.minimumStock ? 'In Stock' : 'Low Stock'}
-                  </span>
-                </td>
-                <td style={{ padding: '1rem', textAlign: 'center' }}>
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '0.25rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    backgroundColor: item.condition === 'good' ? '#dcfce7' : item.condition === 'fair' ? '#fef3c7' : '#fee2e2',
-                    color: item.condition === 'good' ? '#15803d' : item.condition === 'fair' ? '#92400e' : '#7f1d1d'
-                  }}>
-                    {item.condition?.charAt(0).toUpperCase() + item.condition?.slice(1)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  const exportCsv = (rows, filename, mapper) => {
+    const normalizedRows = rows.map(mapper);
+    if (!normalizedRows.length) {
+      toast.error('No data to export');
+      return;
+    }
+
+    const headers = Object.keys(normalizedRows[0]);
+    const csv = [
+      headers.join(','),
+      ...normalizedRows.map((row) => headers.map((header) => `"${String(row[header] ?? '').replace(/"/g, '""')}"`).join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `eeims-${filename}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const renderTableCard = (title, action, children) => (
+    <div style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '18px', boxShadow: '0 8px 22px rgba(15, 23, 42, 0.06)' }}>
+      <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#0f172a' }}>{title}</h3>
+        {action}
       </div>
+      <div style={{ padding: '1rem 1.25rem' }}>{children}</div>
     </div>
   );
 
-  const LowStockReport = () => (
-    <div>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem'
-      }}>
-        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#111827', margin: 0 }}>
-          Low Stock Report ({reportData.lowStock.length} items)
-        </h3>
-        {reportData.lowStock.length > 0 && (
-          <button
-            onClick={() => exportToCSV(reportData.lowStock, 'low-stock-report')}
-            style={{
-              backgroundColor: '#10b981',
-              color: 'white',
-              padding: '0.5rem 1rem',
-              borderRadius: '0.375rem',
-              border: 'none',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}
-          >
-            Export CSV
-          </button>
-        )}
-      </div>
-
-      {reportData.lowStock.length > 0 ? (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ backgroundColor: 'var(--light)' }}>
-              <tr>
-                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment Name</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Current Stock</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Minimum Stock</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Shortage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reportData.lowStock.map(item => (
-                <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '1rem', color: '#111827', fontWeight: '500' }}>{item.name}</td>
-                  <td style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#dc2626' }}>
-                    {item.quantity}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>{item.minimumStock}</td>
-                  <td style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#dc2626' }}>
-                    {item.minimumStock - item.quantity}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div style={{
-          padding: '2rem',
-          textAlign: 'center',
-          color: '#6b7280',
-          backgroundColor: '#f9fafb',
-          borderRadius: 'var(--radius)',
-          border: '1px dashed var(--border)'
-        }}>
-          All equipment stocks are at healthy levels.
-        </div>
-      )}
-    </div>
-  );
-
-  const MaintenanceReport = () => (
-    <div>
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap'
-      }}>
-        <select
-          value={filters.maintenanceStatus}
-          onChange={(e) => setFilters({ ...filters, maintenanceStatus: e.target.value })}
-          style={{
-            padding: '0.75rem',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            fontSize: '0.875rem',
-            minWidth: '150px'
-          }}
-        >
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="completed">Completed</option>
-          <option value="overdue">Overdue</option>
-        </select>
-        <button
-          onClick={() => exportToCSV(filteredMaintenance, 'maintenance-report')}
-          style={{
-            backgroundColor: '#10b981',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            borderRadius: '0.375rem',
-            border: 'none',
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-          disabled={filteredMaintenance.length === 0}
-        >
-          Export CSV
-        </button>
-      </div>
-
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: 'var(--light)' }}>
-            <tr>
-              <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment</th>
-              <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Technician</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Scheduled Date</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Completed Date</th>
-              <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredMaintenance.length > 0 ? (
-              filteredMaintenance.map(item => (
-                <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '1rem', color: '#111827', fontWeight: '500' }}>
-                    {reportData.inventory.find(eq => eq.id === item.equipmentId)?.name}
-                  </td>
-                  <td style={{ padding: '1rem', color: '#6b7280' }}>{item.technicianName || 'N/A'}</td>
-                  <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                    {new Date(item.scheduledDate).toLocaleDateString()}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                    {item.completedDate ? new Date(item.completedDate).toLocaleDateString() : 'Pending'}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      backgroundColor: item.status === 'completed' ? '#dcfce7' : item.status === 'pending' ? '#dbeafe' : '#fee2e2',
-                      color: item.status === 'completed' ? '#15803d' : item.status === 'pending' ? '#0c4a6e' : '#7f1d1d'
-                    }}>
-                      {item.status?.charAt(0).toUpperCase() + item.status?.slice(1)}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" style={{
-                  padding: '2rem',
-                  textAlign: 'center',
-                  color: '#6b7280',
-                  fontStyle: 'italic'
-                }}>
-                  No maintenance records found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const IssuesReport = () => (
-    <div>
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap'
-      }}>
-        <input
-          type="date"
-          value={filters.issueStartDate}
-          onChange={(e) => setFilters({ ...filters, issueStartDate: e.target.value })}
-          style={{
-            padding: '0.75rem',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            fontSize: '0.875rem'
-          }}
-        />
-        <input
-          type="date"
-          value={filters.issueEndDate}
-          onChange={(e) => setFilters({ ...filters, issueEndDate: e.target.value })}
-          style={{
-            padding: '0.75rem',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            fontSize: '0.875rem'
-          }}
-        />
-        <button
-          onClick={() => exportToCSV(filteredIssues, 'issues-report')}
-          style={{
-            backgroundColor: '#10b981',
-            color: 'white',
-            padding: '0.5rem 1rem',
-            borderRadius: '0.375rem',
-            border: 'none',
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-          disabled={filteredIssues.length === 0}
-        >
-          Export CSV
-        </button>
-      </div>
-
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ backgroundColor: 'var(--light)' }}>
-              <tr>
-                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment</th>
-                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Remarks</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Quantity</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>User</th>
-              </tr>
-          </thead>
-          <tbody>
-            {filteredIssues.length > 0 ? (
-              filteredIssues.map(item => (
-                <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '1rem', color: '#111827', fontWeight: '500' }}>
-                    {item.Equipment?.name || `Equipment #${item.equipmentId}`}
-                  </td>
-                  <td style={{ padding: '1rem', color: '#6b7280', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.remarks || '-'}
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      backgroundColor: item.quantity > 1 ? '#fee2e2' : '#dbeafe',
-                      color: item.quantity > 1 ? '#7f1d1d' : '#0c4a6e'
-                    }}>
-                      Qty: {item.quantity}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      backgroundColor: item.status === 'returned' ? '#dcfce7' : item.status === 'pending' ? '#fef3c7' : item.status === 'issued' ? '#dbeafe' : item.status === 'rejected' ? '#fee2e2' : '#e5e7eb',
-                      color: item.status === 'returned' ? '#15803d' : item.status === 'pending' ? '#92400e' : item.status === 'issued' ? '#0c4a6e' : item.status === 'rejected' ? '#991b1b' : '#374151'
-                    }}>
-                      {item.status?.charAt(0).toUpperCase() + item.status?.slice(1)}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                    {item.User?.name || '-'}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" style={{
-                  padding: '2rem',
-                  textAlign: 'center',
-                  color: '#6b7280',
-                  fontStyle: 'italic'
-                }}>
-                  No issues found for the selected date range.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  if (loading) {
-    return (
-      <AdminLayout>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '50vh'
-        }}>
-          <div>Loading reports...</div>
-        </div>
-      </AdminLayout>
-    );
-  }
+  const conditionVariant = (condition) => {
+    if (condition === 'poor') return 'danger';
+    if (condition === 'fair') return 'warning';
+    return 'success';
+  };
 
   return (
     <AdminLayout>
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: '700',
-            color: '#111827',
-            marginBottom: '0.5rem'
-          }}>Reports & Analytics</h1>
-          <p style={{ color: '#6b7280' }}>View detailed reports on equipment inventory, maintenance, and issues.</p>
-        </div>
-
-        <div style={{
-          backgroundColor: 'var(--white)',
-          borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)',
-          border: '1px solid var(--border)',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            display: 'flex',
-            borderBottom: '1px solid var(--border)',
-            backgroundColor: 'var(--light)'
-          }}>
-            {[
-              { id: 'inventory', label: 'Inventory', icon: '📦' },
-              { id: 'lowStock', label: 'Low Stock', icon: '⚠️' },
-              { id: 'maintenance', label: 'Maintenance', icon: '🔧' },
-              { id: 'issues', label: 'Issues', icon: '🐛' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                style={{
-                  flex: 1,
-                  padding: '1rem',
-                  border: 'none',
-                  backgroundColor: activeTab === tab.id ? 'var(--white)' : 'transparent',
-                  borderBottom: activeTab === tab.id ? '3px solid var(--primary)' : 'none',
-                  color: activeTab === tab.id ? 'var(--primary)' : '#6b7280',
-                  fontWeight: activeTab === tab.id ? '600' : '500',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {tab.icon} {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ padding: '1.5rem' }}>
-            {activeTab === 'inventory' && <InventoryReport />}
-            {activeTab === 'lowStock' && <LowStockReport />}
-            {activeTab === 'maintenance' && <MaintenanceReport />}
-            {activeTab === 'issues' && <IssuesReport />}
-          </div>
-        </div>
+      <div style={{ marginBottom: '1.75rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.45rem' }}>Reports & Analytics</h1>
+        <p style={{ color: '#64748b' }}>Generate and export system reports.</p>
       </div>
+
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        {[
+          ['inventory', 'Inventory'],
+          ['issues', 'Issues'],
+          ['maintenance', 'Maintenance'],
+          ['low-stock', 'Low Stock'],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            style={{
+              padding: '0.7rem 1rem',
+              borderRadius: '9999px',
+              backgroundColor: activeTab === key ? '#2563eb' : 'white',
+              color: activeTab === key ? 'white' : '#475569',
+              border: activeTab === key ? 'none' : '1px solid #cbd5e1',
+              fontWeight: '700',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <Loader text="Loading reports..." />
+      ) : (
+        <>
+          {activeTab === 'inventory' && renderTableCard(
+            `Equipment Inventory Report (${inventory.length} items)`,
+            <button onClick={() => exportCsv(inventory, 'inventory', (item) => ({
+              equipment_name: item.name,
+              category: item.Category?.name || 'No Category',
+              location: item.Location?.name || 'No Location',
+              current_stock: item.quantity,
+              minimum_stock: item.minimumStock,
+              status: item.quantity <= item.minimumStock ? 'Low Stock' : 'In Stock',
+              condition: item.condition,
+            }))} style={{ padding: '0.65rem 1rem', borderRadius: '10px', backgroundColor: '#2563eb', color: 'white', fontWeight: '600' }}>Export CSV</button>,
+            inventory.length ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: '#f8fafc' }}>
+                    <tr>{['Equipment Name', 'Category', 'Location', 'Current Stock', 'Minimum Stock', 'Status', 'Condition'].map((label) => <th key={label} style={{ padding: '0.85rem 1rem', textAlign: 'left', color: '#64748b', fontSize: '0.8rem' }}>{label}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {inventory.map((item) => (
+                      <tr key={item.id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '0.9rem 1rem', fontWeight: '600', color: '#0f172a' }}>{item.name}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.Category?.name || 'No Category'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.Location?.name || 'No Location'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: item.quantity <= item.minimumStock ? '#dc2626' : '#16a34a', fontWeight: '700' }}>{item.quantity}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.minimumStock}</td>
+                        <td style={{ padding: '0.9rem 1rem' }}><Badge variant={item.quantity <= item.minimumStock ? 'danger' : 'success'} size="sm">{item.quantity <= item.minimumStock ? 'Low Stock' : 'In Stock'}</Badge></td>
+                        <td style={{ padding: '0.9rem 1rem' }}><Badge variant={conditionVariant(item.condition)} size="sm">{item.condition}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <EmptyState title="No inventory data found" />
+          )}
+
+          {activeTab === 'issues' && renderTableCard(
+            'Issue Report',
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <input type="date" value={issueFilters.startDate} onChange={(e) => setIssueFilters((prev) => ({ ...prev, startDate: e.target.value }))} style={{ padding: '0.65rem 0.8rem', border: '1px solid #cbd5e1', borderRadius: '10px' }} />
+              <input type="date" value={issueFilters.endDate} onChange={(e) => setIssueFilters((prev) => ({ ...prev, endDate: e.target.value }))} style={{ padding: '0.65rem 0.8rem', border: '1px solid #cbd5e1', borderRadius: '10px' }} />
+              <button onClick={loadIssueReport} style={{ padding: '0.65rem 1rem', borderRadius: '10px', backgroundColor: '#2563eb', color: 'white', fontWeight: '600' }}>Apply Filter</button>
+              <button onClick={() => exportCsv(issues, 'issues', (item) => ({
+                equipment_name: item.Equipment?.name || 'Unknown',
+                issued_to: item.User?.name || 'Unknown',
+                quantity: item.quantity,
+                issue_date: item.issueDate || '',
+                return_date: item.returnDate || 'Not returned',
+                status: item.status,
+              }))} style={{ padding: '0.65rem 1rem', borderRadius: '10px', backgroundColor: '#16a34a', color: 'white', fontWeight: '600' }}>Export CSV</button>
+            </div>,
+            issues.length ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: '#f8fafc' }}>
+                    <tr>{['Equipment Name', 'Issued To', 'Quantity', 'Issue Date', 'Return Date', 'Status'].map((label) => <th key={label} style={{ padding: '0.85rem 1rem', textAlign: 'left', color: '#64748b', fontSize: '0.8rem' }}>{label}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {issues.map((item) => (
+                      <tr key={item.id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '0.9rem 1rem', fontWeight: '600', color: '#0f172a' }}>{item.Equipment?.name || 'Unknown'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.User?.name || 'Unknown'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.quantity}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.issueDate ? new Date(item.issueDate).toLocaleDateString() : '-'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.returnDate ? new Date(item.returnDate).toLocaleDateString() : 'Not returned'}</td>
+                        <td style={{ padding: '0.9rem 1rem' }}><Badge variant={item.status === 'rejected' ? 'danger' : item.status === 'returned' ? 'success' : item.status === 'pending' ? 'warning' : 'info'} size="sm">{item.status}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <EmptyState title="No issue data found" />
+          )}
+
+          {activeTab === 'maintenance' && renderTableCard(
+            'Maintenance Report',
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <select value={maintenanceStatus} onChange={(e) => { setMaintenanceStatus(e.target.value); loadMaintenanceReport(e.target.value); }} style={{ padding: '0.65rem 0.8rem', border: '1px solid #cbd5e1', borderRadius: '10px' }}>
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <button onClick={() => exportCsv(maintenance, 'maintenance', (item) => ({
+                equipment_name: item.Equipment?.name || 'Unknown',
+                technician_name: item.technician?.name || 'Unknown',
+                scheduled_date: item.scheduledDate || '',
+                completed_date: item.completedDate || '-',
+                status: item.status,
+                notes: item.notes || '',
+              }))} style={{ padding: '0.65rem 1rem', borderRadius: '10px', backgroundColor: '#16a34a', color: 'white', fontWeight: '600' }}>Export CSV</button>
+            </div>,
+            maintenance.length ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: '#f8fafc' }}>
+                    <tr>{['Equipment Name', 'Technician Name', 'Scheduled Date', 'Completed Date', 'Status', 'Notes'].map((label) => <th key={label} style={{ padding: '0.85rem 1rem', textAlign: 'left', color: '#64748b', fontSize: '0.8rem' }}>{label}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {maintenance.map((item) => (
+                      <tr key={item.id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '0.9rem 1rem', fontWeight: '600', color: '#0f172a' }}>{item.Equipment?.name || 'Unknown'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.technician?.name || 'Unknown'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{new Date(item.scheduledDate).toLocaleDateString()}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.completedDate ? new Date(item.completedDate).toLocaleDateString() : '-'}</td>
+                        <td style={{ padding: '0.9rem 1rem' }}><Badge variant={item.status === 'completed' ? 'success' : item.status === 'overdue' ? 'danger' : 'warning'} size="sm">{item.status}</Badge></td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.notes ? `${item.notes.slice(0, 60)}${item.notes.length > 60 ? '...' : ''}` : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <EmptyState title="No maintenance data found" />
+          )}
+
+          {activeTab === 'low-stock' && renderTableCard(
+            `Low Stock Report (${lowStock.length} items require restocking)`,
+            <button onClick={() => exportCsv(lowStock, 'low-stock', (item) => ({
+              equipment_name: item.name,
+              category: item.Category?.name || 'No Category',
+              location: item.Location?.name || 'No Location',
+              current_stock: item.quantity,
+              minimum_required: item.minimumStock,
+              shortage: item.minimumStock - item.quantity,
+            }))} style={{ padding: '0.65rem 1rem', borderRadius: '10px', backgroundColor: '#2563eb', color: 'white', fontWeight: '600' }}>Export CSV</button>,
+            lowStock.length ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ backgroundColor: '#f8fafc' }}>
+                    <tr>{['Equipment Name', 'Category', 'Location', 'Current Stock', 'Minimum Required', 'Shortage'].map((label) => <th key={label} style={{ padding: '0.85rem 1rem', textAlign: 'left', color: '#64748b', fontSize: '0.8rem' }}>{label}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {lowStock.map((item) => (
+                      <tr key={item.id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '0.9rem 1rem', fontWeight: '600', color: '#0f172a' }}>{item.name}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.Category?.name || 'No Category'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.Location?.name || 'No Location'}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#dc2626', fontWeight: '700' }}>{item.quantity}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#475569' }}>{item.minimumStock}</td>
+                        <td style={{ padding: '0.9rem 1rem', color: '#dc2626', fontWeight: '700' }}>{item.minimumStock - item.quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <EmptyState title="No low stock items found" />
+          )}
+        </>
+      )}
     </AdminLayout>
   );
 };

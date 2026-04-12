@@ -1,32 +1,62 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import AdminLayout from '../../../components/layout/AdminLayout';
-import equipmentService from '../../../services/equipmentService';
-import categoryService from '../../../services/categoryService';
-import locationService from '../../../services/locationService';
 import toast from 'react-hot-toast';
+import AdminLayout from '../../../components/layout/AdminLayout';
+import Loader from '../../../components/ui/Loader';
+import categoryService from '../../../services/categoryService';
+import equipmentService from '../../../services/equipmentService';
+import locationService from '../../../services/locationService';
+
+const fieldLabelStyle = {
+  display: 'block',
+  fontSize: '0.875rem',
+  fontWeight: '600',
+  color: '#0f172a',
+  marginBottom: '0.5rem',
+};
+
+const inputStyle = (hasError) => ({
+  width: '100%',
+  padding: '0.8rem 0.9rem',
+  border: hasError ? '1px solid #dc2626' : '1px solid #dbe3ef',
+  borderRadius: '12px',
+  fontSize: '0.95rem',
+  color: '#0f172a',
+  backgroundColor: '#ffffff',
+  outline: 'none',
+  boxSizing: 'border-box',
+});
+
+const errorStyle = {
+  color: '#dc2626',
+  fontSize: '0.75rem',
+  marginTop: '0.4rem',
+};
+
+const helperStyle = {
+  color: '#64748b',
+  fontSize: '0.8rem',
+  marginTop: '0.4rem',
+};
+
+const initialFormData = {
+  name: '',
+  description: '',
+  categoryId: '',
+  locationId: '',
+  quantity: '0',
+  minimumStock: '5',
+  condition: 'good',
+};
 
 const EditEquipment = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    categoryId: '',
-    locationId: '',
-    quantity: '',
-    minimumStock: '',
-    condition: 'good',
-    purchaseDate: '',
-    purchasePrice: '',
-    serialNumber: '',
-    modelNumber: '',
-    manufacturer: ''
-  });
+  const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -39,48 +69,43 @@ const EditEquipment = () => {
       const [equipmentRes, categoriesRes, locationsRes] = await Promise.all([
         equipmentService.getById(id),
         categoryService.getAll(),
-        locationService.getAll()
+        locationService.getAll(),
       ]);
 
-      const equipment = equipmentRes.data;
+      const equipment = equipmentRes.data || {};
+
       setFormData({
         name: equipment.name || '',
         description: equipment.description || '',
-        categoryId: equipment.categoryId?.toString() || '',
-        locationId: equipment.locationId?.toString() || '',
-        quantity: equipment.quantity?.toString() || '',
-        minimumStock: equipment.minimumStock?.toString() || '',
+        categoryId: equipment.categoryId ? String(equipment.categoryId) : '',
+        locationId: equipment.locationId ? String(equipment.locationId) : '',
+        quantity: equipment.quantity !== undefined ? String(equipment.quantity) : '0',
+        minimumStock: equipment.minimumStock !== undefined ? String(equipment.minimumStock) : '5',
         condition: equipment.condition || 'good',
-        purchaseDate: equipment.purchaseDate ? new Date(equipment.purchaseDate).toISOString().split('T')[0] : '',
-        purchasePrice: equipment.purchasePrice?.toString() || '',
-        serialNumber: equipment.serialNumber || '',
-        modelNumber: equipment.modelNumber || '',
-        manufacturer: equipment.manufacturer || ''
       });
 
       setCategories(categoriesRes.data || []);
       setLocations(locationsRes.data || []);
     } catch (error) {
-      console.error('Error loading equipment data:', error);
-      toast.error('Failed to load equipment data');
+      console.error('Error loading equipment details:', error);
+      toast.error('Failed to load equipment details');
       navigate('/admin/equipment');
     } finally {
       setFetching(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
   };
@@ -92,127 +117,125 @@ const EditEquipment = () => {
       newErrors.name = 'Equipment name is required';
     }
 
-    if (!formData.categoryId) {
-      newErrors.categoryId = 'Category is required';
+    if (formData.quantity === '' || Number(formData.quantity) < 0) {
+      newErrors.quantity = 'Quantity must be 0 or greater';
     }
 
-    if (!formData.locationId) {
-      newErrors.locationId = 'Location is required';
+    if (formData.minimumStock === '' || Number(formData.minimumStock) < 1) {
+      newErrors.minimumStock = 'Minimum stock must be at least 1';
     }
 
-    if (!formData.quantity || formData.quantity < 0) {
-      newErrors.quantity = 'Valid quantity is required';
-    }
-
-    if (!formData.minimumStock || formData.minimumStock < 0) {
-      newErrors.minimumStock = 'Valid minimum stock is required';
-    }
-
-    if (formData.purchasePrice && formData.purchasePrice < 0) {
-      newErrors.purchasePrice = 'Purchase price cannot be negative';
+    if (!['good', 'fair', 'poor'].includes(formData.condition)) {
+      newErrors.condition = 'Please select a valid condition';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Please fix the errors in the form');
+      toast.error('Please fix the highlighted fields');
       return;
     }
 
-    setLoading(true);
-    try {
-      const submitData = {
-        ...formData,
-        quantity: parseInt(formData.quantity),
-        minimumStock: parseInt(formData.minimumStock),
-        categoryId: parseInt(formData.categoryId),
-        locationId: parseInt(formData.locationId),
-        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
-        purchaseDate: formData.purchaseDate || null
-      };
+    const payload = {
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      categoryId: formData.categoryId ? Number(formData.categoryId) : null,
+      locationId: formData.locationId ? Number(formData.locationId) : null,
+      quantity: Number(formData.quantity),
+      minimumStock: Number(formData.minimumStock),
+      condition: formData.condition,
+    };
 
-      await equipmentService.update(id, submitData);
+    try {
+      setSaving(true);
+      await equipmentService.update(id, payload);
       toast.success('Equipment updated successfully');
       navigate('/admin/equipment');
     } catch (error) {
       console.error('Error updating equipment:', error);
       toast.error(error.response?.data?.message || 'Failed to update equipment');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   if (fetching) {
     return (
       <AdminLayout>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '50vh'
-        }}>
-          <div>Loading equipment data...</div>
-        </div>
+        <Loader text="Loading equipment details..." />
       </AdminLayout>
     );
   }
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '920px', margin: '0 auto' }}>
         <div style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: '1rem',
-          marginBottom: '2rem'
+          marginBottom: '1.75rem',
+          flexWrap: 'wrap',
         }}>
-          <button
-            onClick={() => navigate('/admin/equipment')}
-            style={{
-              backgroundColor: 'var(--light)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)',
-              padding: '0.5rem',
-              cursor: 'pointer',
-              color: '#374151'
-            }}
-          >
-            ← Back
-          </button>
           <div>
             <h1 style={{
+              margin: 0,
               fontSize: '2rem',
               fontWeight: '700',
-              color: '#111827',
-              marginBottom: '0.5rem'
-            }}>Edit Equipment</h1>
-            <p style={{ color: '#6b7280' }}>Update the equipment details.</p>
+              color: '#0f172a',
+            }}>
+              Edit Equipment
+            </h1>
+            <p style={{
+              margin: '0.5rem 0 0',
+              color: '#64748b',
+              fontSize: '0.95rem',
+            }}>
+              Update stock details, category, location, and condition for this item.
+            </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/admin/equipment')}
+            style={{
+              padding: '0.8rem 1rem',
+              borderRadius: '12px',
+              border: '1px solid #dbe3ef',
+              backgroundColor: '#ffffff',
+              color: '#0f172a',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+          >
+            Back to Equipment
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{
-          backgroundColor: 'var(--white)',
-          borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)',
-          border: '1px solid var(--border)',
-          padding: '2rem'
-        }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-            {/* Equipment Name */}
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '20px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 12px 35px rgba(15, 23, 42, 0.08)',
+            padding: '2rem',
+          }}
+        >
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '1.5rem',
+          }}>
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Equipment Name *
+              <label style={fieldLabelStyle}>
+                Equipment Name <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <input
                 type="text"
@@ -220,32 +243,13 @@ const EditEquipment = () => {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="Enter equipment name"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: errors.name ? '1px solid #dc2626' : '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
+                style={inputStyle(errors.name)}
               />
-              {errors.name && (
-                <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                  {errors.name}
-                </p>
-              )}
+              {errors.name ? <p style={errorStyle}>{errors.name}</p> : null}
             </div>
 
-            {/* Description */}
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Description
-              </label>
+              <label style={fieldLabelStyle}>Description</label>
               <textarea
                 name="description"
                 value={formData.description}
@@ -253,362 +257,142 @@ const EditEquipment = () => {
                 placeholder="Enter equipment description"
                 rows={3}
                 style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem',
-                  resize: 'vertical'
+                  ...inputStyle(errors.description),
+                  resize: 'vertical',
+                  minHeight: '110px',
                 }}
               />
             </div>
 
-            {/* Category */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Category *
-              </label>
+              <label style={fieldLabelStyle}>Category</label>
               <select
                 name="categoryId"
                 value={formData.categoryId}
                 onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: errors.categoryId ? '1px solid #dc2626' : '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
+                style={inputStyle(errors.categoryId)}
               >
-                <option value="">Select a category</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>{category.name}</option>
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
                 ))}
               </select>
-              {errors.categoryId && (
-                <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                  {errors.categoryId}
-                </p>
-              )}
             </div>
 
-            {/* Location */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Location *
-              </label>
+              <label style={fieldLabelStyle}>Location</label>
               <select
                 name="locationId"
                 value={formData.locationId}
                 onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: errors.locationId ? '1px solid #dc2626' : '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
+                style={inputStyle(errors.locationId)}
               >
-                <option value="">Select a location</option>
-                {locations.map(location => (
-                  <option key={location.id} value={location.id}>{location.name}</option>
+                <option value="">Select Location</option>
+                {locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
                 ))}
               </select>
-              {errors.locationId && (
-                <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                  {errors.locationId}
-                </p>
-              )}
             </div>
 
-            {/* Quantity */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Quantity *
+              <label style={fieldLabelStyle}>
+                Quantity <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <input
                 type="number"
                 name="quantity"
+                min="0"
                 value={formData.quantity}
                 onChange={handleInputChange}
-                placeholder="0"
-                min="0"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: errors.quantity ? '1px solid #dc2626' : '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
+                placeholder="Enter current quantity"
+                style={inputStyle(errors.quantity)}
               />
-              {errors.quantity && (
-                <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                  {errors.quantity}
-                </p>
-              )}
+              {errors.quantity ? <p style={errorStyle}>{errors.quantity}</p> : null}
             </div>
 
-            {/* Minimum Stock */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Minimum Stock *
+              <label style={fieldLabelStyle}>
+                Minimum Stock Level <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <input
                 type="number"
                 name="minimumStock"
+                min="1"
                 value={formData.minimumStock}
                 onChange={handleInputChange}
-                placeholder="0"
-                min="0"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: errors.minimumStock ? '1px solid #dc2626' : '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
+                placeholder="Alert when stock falls below this number"
+                style={inputStyle(errors.minimumStock)}
               />
-              {errors.minimumStock && (
-                <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                  {errors.minimumStock}
+              {errors.minimumStock ? (
+                <p style={errorStyle}>{errors.minimumStock}</p>
+              ) : (
+                <p style={helperStyle}>
+                  System will create an alert when quantity drops below this value.
                 </p>
               )}
             </div>
 
-            {/* Condition */}
             <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Condition
+              <label style={fieldLabelStyle}>
+                Condition <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <select
                 name="condition"
                 value={formData.condition}
                 onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
+                style={inputStyle(errors.condition)}
               >
                 <option value="good">Good</option>
                 <option value="fair">Fair</option>
                 <option value="poor">Poor</option>
               </select>
-            </div>
-
-            {/* Purchase Date */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Purchase Date
-              </label>
-              <input
-                type="date"
-                name="purchaseDate"
-                value={formData.purchaseDate}
-                onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
-              />
-            </div>
-
-            {/* Purchase Price */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Purchase Price
-              </label>
-              <input
-                type="number"
-                name="purchasePrice"
-                value={formData.purchasePrice}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: errors.purchasePrice ? '1px solid #dc2626' : '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
-              />
-              {errors.purchasePrice && (
-                <p style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                  {errors.purchasePrice}
-                </p>
-              )}
-            </div>
-
-            {/* Serial Number */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Serial Number
-              </label>
-              <input
-                type="text"
-                name="serialNumber"
-                value={formData.serialNumber}
-                onChange={handleInputChange}
-                placeholder="Enter serial number"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
-              />
-            </div>
-
-            {/* Model Number */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Model Number
-              </label>
-              <input
-                type="text"
-                name="modelNumber"
-                value={formData.modelNumber}
-                onChange={handleInputChange}
-                placeholder="Enter model number"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
-              />
-            </div>
-
-            {/* Manufacturer */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Manufacturer
-              </label>
-              <input
-                type="text"
-                name="manufacturer"
-                value={formData.manufacturer}
-                onChange={handleInputChange}
-                placeholder="Enter manufacturer name"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '0.875rem'
-                }}
-              />
+              {errors.condition ? <p style={errorStyle}>{errors.condition}</p> : null}
             </div>
           </div>
 
-          {/* Submit Button */}
           <div style={{
             display: 'flex',
-            gap: '1rem',
             justifyContent: 'flex-end',
+            gap: '1rem',
             marginTop: '2rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid var(--border)'
+            flexWrap: 'wrap',
           }}>
             <button
               type="button"
               onClick={() => navigate('/admin/equipment')}
+              disabled={saving}
               style={{
-                padding: '0.75rem 1.5rem',
-                border: '1px solid var(--border)',
-                backgroundColor: 'var(--white)',
-                color: '#374151',
-                borderRadius: 'var(--radius)',
-                cursor: 'pointer',
-                fontWeight: '500'
+                padding: '0.9rem 1.3rem',
+                borderRadius: '12px',
+                border: '1px solid #dbe3ef',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                fontWeight: '600',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.7 : 1,
               }}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={saving}
               style={{
-                padding: '0.75rem 1.5rem',
-                backgroundColor: 'var(--primary)',
-                color: 'var(--white)',
+                padding: '0.9rem 1.4rem',
+                borderRadius: '12px',
                 border: 'none',
-                borderRadius: 'var(--radius)',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontWeight: '500',
-                opacity: loading ? 0.6 : 1
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#ffffff',
+                fontWeight: '700',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                opacity: saving ? 0.7 : 1,
               }}
             >
-              {loading ? 'Updating Equipment...' : 'Update Equipment'}
+              {saving ? 'Saving...' : 'Update Equipment'}
             </button>
           </div>
         </form>

@@ -14,6 +14,7 @@ const Equipment = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedCondition, setSelectedCondition] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState(null);
 
@@ -61,8 +62,9 @@ const Equipment = () => {
                          item.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !selectedCategory || item.categoryId === parseInt(selectedCategory);
     const matchesLocation = !selectedLocation || item.locationId === parseInt(selectedLocation);
+    const matchesCondition = !selectedCondition || item.condition === selectedCondition;
 
-    return matchesSearch && matchesCategory && matchesLocation;
+    return matchesSearch && matchesCategory && matchesLocation && matchesCondition;
   });
 
   const getStatusBadge = (item) => {
@@ -195,6 +197,42 @@ const Equipment = () => {
               <option key={location.id} value={location.id}>{location.name}</option>
             ))}
           </select>
+
+          <select
+            value={selectedCondition}
+            onChange={(e) => setSelectedCondition(e.target.value)}
+            style={{
+              padding: '0.75rem',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              fontSize: '0.875rem',
+              minWidth: '150px'
+            }}
+          >
+            <option value="">All Conditions</option>
+            <option value="good">Good</option>
+            <option value="fair">Fair</option>
+            <option value="poor">Poor</option>
+          </select>
+
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setSelectedCategory('');
+              setSelectedLocation('');
+              setSelectedCondition('');
+            }}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              fontSize: '0.875rem',
+              backgroundColor: 'white',
+              color: '#374151'
+            }}
+          >
+            Clear Filters
+          </button>
         </div>
 
         {/* Equipment Table */}
@@ -224,10 +262,12 @@ const Equipment = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead style={{ backgroundColor: 'var(--light)' }}>
                 <tr>
+                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>#</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Equipment</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Category</th>
                   <th style={{ padding: '1rem', textAlign: 'left', fontWeight: '600', color: '#374151' }}>Location</th>
                   <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Stock</th>
+                  <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Min Stock</th>
                   <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Condition</th>
                   <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Status</th>
                   <th style={{ padding: '1rem', textAlign: 'center', fontWeight: '600', color: '#374151' }}>Actions</th>
@@ -235,12 +275,13 @@ const Equipment = () => {
               </thead>
               <tbody>
                 {filteredEquipment.length > 0 ? (
-                  filteredEquipment.map((item) => {
+                  filteredEquipment.map((item, index) => {
                     const statusBadge = getStatusBadge(item);
                     const conditionBadge = getConditionBadge(item.condition);
 
                     return (
-                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--border)', backgroundColor: item.quantity <= item.minimumStock ? '#fff5f5' : index % 2 ? '#fcfdff' : '#ffffff' }}>
+                        <td style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>{index + 1}</td>
                         <td style={{ padding: '1rem' }}>
                           <div>
                             <div style={{ fontWeight: '500', color: '#111827' }}>{item.name}</div>
@@ -256,12 +297,10 @@ const Equipment = () => {
                           {locations.find(loc => loc.id === item.locationId)?.name || 'N/A'}
                         </td>
                         <td style={{ padding: '1rem', textAlign: 'center' }}>
-                          <div>
-                            <div style={{ fontWeight: '600', color: '#111827' }}>{item.quantity}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                              Min: {item.minimumStock}
-                            </div>
-                          </div>
+                          <div style={{ fontWeight: '600', color: '#111827' }}>{item.quantity}</div>
+                        </td>
+                        <td style={{ padding: '1rem', textAlign: 'center', color: '#6b7280', fontWeight: '600' }}>
+                          {item.minimumStock}
                         </td>
                         <td style={{ padding: '1rem', textAlign: 'center' }}>
                           <span style={{
@@ -329,7 +368,7 @@ const Equipment = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="7" style={{
+                    <td colSpan="9" style={{
                       padding: '3rem',
                       textAlign: 'center',
                       color: '#6b7280',

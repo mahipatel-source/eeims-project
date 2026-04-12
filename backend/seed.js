@@ -6,9 +6,9 @@ async function seedDatabase() {
   try {
     console.log('🌱 Starting database seed...');
 
-    // Check if data already exists
-    const userCount = await User.count();
-    if (userCount > 1) {
+    // Check if admin already exists (seed from .env)
+    const adminExists = await User.findOne({ where: { email: 'admin@eeims.com' } });
+    if (adminExists) {
       console.log('✅ Database already seeded. Exiting...');
       process.exit(0);
     }
@@ -31,35 +31,35 @@ async function seedDatabase() {
     ]);
     console.log('✅ Created 4 locations');
 
-    // Get admin user (created during setup)
-    let admin = await User.findOne({ where: { email: 'admin@example.com' } });
+    // Get admin user (seeded from .env: admin@eeims.com / Admin@123)
+    let admin = await User.findOne({ where: { email: 'admin@eeims.com' } });
     if (!admin) {
       admin = await User.create({
-        name: 'Admin User',
-        email: 'admin@example.com',
-        password: await bcrypt.hash('password123', 10),
+        name: 'System Admin',
+        email: 'admin@eeims.com',
+        password: await bcrypt.hash('Admin@123', 10),
         role: 'admin'
       });
     }
 
-    // Get manager user (created during setup)
-    let manager = await User.findOne({ where: { email: 'manager@example.com' } });
+    // Get manager user (manager@eeims.com / Manager@123)
+    let manager = await User.findOne({ where: { email: 'manager@eeims.com' } });
     if (!manager) {
       manager = await User.create({
         name: 'Manager User',
-        email: 'manager@example.com',
-        password: await bcrypt.hash('password123', 10),
+        email: 'manager@eeims.com',
+        password: await bcrypt.hash('Manager@123', 10),
         role: 'manager'
       });
     }
 
-    // Get technician user (created during setup)
-    let technician = await User.findOne({ where: { email: 'technician@example.com' } });
+    // Get technician user (tech@eeims.com / Tech@123)
+    let technician = await User.findOne({ where: { email: 'tech@eeims.com' } });
     if (!technician) {
       technician = await User.create({
         name: 'John Technician',
-        email: 'technician@example.com',
-        password: 'password123',
+        email: 'tech@eeims.com',
+        password: await bcrypt.hash('Tech@123', 10),
         role: 'technician'
       });
     }
