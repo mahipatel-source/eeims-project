@@ -28,12 +28,12 @@ const IssueEquipment = () => {
       setLoading(true);
       const [equipmentRes, usersRes, issuesRes] = await Promise.all([
         equipmentService.getAll(),
-        userService.getAll(),
+        userService.getEmployees(),
         issueService.getAll()
       ]);
 
       const equipmentData = equipmentRes.data || [];
-      const usersData = (usersRes.data || []).filter((item) => item.role === 'employee');
+      const usersData = usersRes.data || [];
       const issuesData = issuesRes.data || [];
 
       setEquipment(equipmentData);

@@ -34,23 +34,30 @@ const Maintenance = () => {
   }, []);
 
   const loadData = async () => {
-    try {
-      setLoading(true);
-      const [maintenanceRes, equipmentRes, usersRes] = await Promise.all([
-        maintenanceService.getAll(),
-        equipmentService.getAll(),
-        userService.getAll(),
-      ]);
+    setLoading(true);
 
-      setMaintenances(maintenanceRes.data || []);
-      setEquipment(equipmentRes.data || []);
-      setTechnicians((usersRes.data || []).filter((item) => item.role === 'technician'));
-    } catch (error) {
+    const [maintenanceResult, equipmentResult, usersResult] = await Promise.allSettled([
+      maintenanceService.getAll(),
+      equipmentService.getAll(),
+      userService.getAll(),
+    ]);
+
+    const maintenanceData = maintenanceResult.status === 'fulfilled' ? maintenanceResult.value.data : [];
+    const equipmentData = equipmentResult.status === 'fulfilled' ? equipmentResult.value.data : [];
+    const usersData = usersResult.status === 'fulfilled' ? usersResult.value.data : [];
+
+    setMaintenances(maintenanceData || []);
+    setEquipment(equipmentData || []);
+    setTechnicians((usersData || []).filter((item) => item.role === 'technician'));
+
+    const failedResult = [maintenanceResult, equipmentResult, usersResult].find((result) => result.status === 'rejected');
+    if (failedResult) {
+      const error = failedResult.reason;
       console.error('Error loading maintenance data:', error);
-      toast.error('Failed to load maintenance records');
-    } finally {
-      setLoading(false);
+      toast.error(error?.response?.data?.message || 'Failed to load maintenance records');
     }
+
+    setLoading(false);
   };
 
   const filteredMaintenances = useMemo(() => (

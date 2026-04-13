@@ -11,6 +11,11 @@ const userService = {
     return response.data;
   },
 
+  getEmployees: async () => {
+    const response = await API.get('/users/employees');
+    return response.data;
+  },
+
   create: async (data) => {
     const response = await API.post('/users', data);
     return response.data;

@@ -37,9 +37,11 @@ export const AuthProvider = ({ children }) => {
         } catch {
           parsedUser = null;
         }
-        if (!parsedUser) {
+        if (!parsedUser || !parsedUser.role) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          setUser(null);
+          setToken(null);
           setIsLoading(false);
           return;
         }
@@ -105,7 +107,11 @@ export const AuthProvider = ({ children }) => {
 
 // custom hook to use auth context
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
 export default AuthContext;

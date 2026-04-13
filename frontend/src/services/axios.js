@@ -22,10 +22,15 @@ API.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       const currentPath = window.location.pathname;
-      if (currentPath.startsWith('/admin') || currentPath.startsWith('/manager') || currentPath.startsWith('/technician')) {
-        window.location.href = '/staff-login';
-      } else {
-        window.location.href = '/login';
+      const authPages = ['/login', '/staff-login', '/register'];
+
+      // Do not redirect when already on an auth page, so login errors can be shown.
+      if (!authPages.includes(currentPath)) {
+        if (currentPath.startsWith('/admin') || currentPath.startsWith('/manager') || currentPath.startsWith('/technician')) {
+          window.location.href = '/staff-login';
+        } else {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

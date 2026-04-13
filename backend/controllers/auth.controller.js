@@ -65,9 +65,12 @@ exports.login = async (req, res) => {
       }
     }
 
-    // generate JWT token
+    const normalizedRole = typeof user.role === 'string'
+      ? user.role.trim().toLowerCase()
+      : user.role;
+
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: normalizedRole },
       process.env.JWT_SECRET,
       { expiresIn: '12h' }
     );
@@ -77,7 +80,7 @@ exports.login = async (req, res) => {
       message: 'Login successful',
       data: {
         token,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        user: { id: user.id, name: user.name, email: user.email, role: normalizedRole },
       },
     });
   } catch (err) {

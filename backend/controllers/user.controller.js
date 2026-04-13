@@ -39,6 +39,20 @@ exports.getUserById = async (req, res) => {
   }
 };
 
+// get all employees — admin and manager
+exports.getEmployees = async (req, res) => {
+  try {
+    const employees = await User.findAll({
+      where: { role: 'employee' },
+      attributes: ['id', 'name', 'email', 'role', 'createdAt'],
+    });
+    return res.json({ success: true, data: employees });
+  } catch (err) {
+    console.error('Get employees error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to fetch employees' });
+  }
+};
+
 // create new user — admin only
 exports.createUser = async (req, res) => {
   try {

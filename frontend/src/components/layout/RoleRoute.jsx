@@ -30,6 +30,15 @@ const RoleRoute = ({ children, roles }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // if user role is missing or invalid, treat as unauthenticated
+  if (!normalizedRole) {
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/admin') || currentPath.startsWith('/manager') || currentPath.startsWith('/technician')) {
+      return <Navigate to="/staff-login" replace />;
+    }
+    return <Navigate to="/login" replace />;
+  }
+
   // check if user role is allowed
   if (!allowedRoles.includes(normalizedRole)) {
     return <Navigate to="/unauthorized" replace />;

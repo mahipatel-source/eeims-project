@@ -25,32 +25,35 @@ const MaintenanceTracking = () => {
   }, []);
 
   const loadData = async () => {
-    try {
-      setLoading(true);
-      const [equipmentRes, techniciansRes, maintenanceRes] = await Promise.all([
-        equipmentService.getAll(),
-        userService.getAll(),
-        maintenanceService.getAll(),
-      ]);
+    setLoading(true);
 
-      const equipmentData = equipmentRes.data || [];
-      const techniciansData = (techniciansRes.data || []).filter((item) => item.role === 'technician');
-      const maintenanceData = maintenanceRes.data || [];
+    const [equipmentResult, techniciansResult, maintenanceResult] = await Promise.allSettled([
+      equipmentService.getAll(),
+      userService.getAll(),
+      maintenanceService.getAll(),
+    ]);
 
-      setEquipment(equipmentData);
-      setTechnicians(techniciansData);
-      setMaintenance(maintenanceData);
-      setForm((prev) => ({
-        ...prev,
-        equipmentId: equipmentData[0]?.id || prev.equipmentId,
-        technicianId: techniciansData[0]?.id || prev.technicianId,
-      }));
-    } catch (error) {
+    const equipmentData = equipmentResult.status === 'fulfilled' ? equipmentResult.value.data : [];
+    const techniciansData = techniciansResult.status === 'fulfilled' ? (techniciansResult.value.data || []).filter((item) => item.role === 'technician') : [];
+    const maintenanceData = maintenanceResult.status === 'fulfilled' ? maintenanceResult.value.data : [];
+
+    setEquipment(equipmentData);
+    setTechnicians(techniciansData);
+    setMaintenance(maintenanceData);
+    setForm((prev) => ({
+      ...prev,
+      equipmentId: equipmentData[0]?.id || prev.equipmentId,
+      technicianId: techniciansData[0]?.id || prev.technicianId,
+    }));
+
+    const failedResult = [equipmentResult, techniciansResult, maintenanceResult].find((result) => result.status === 'rejected');
+    if (failedResult) {
+      const error = failedResult.reason;
       console.error('Error loading data:', error);
-      toast.error('Failed to load maintenance data');
-    } finally {
-      setLoading(false);
+      toast.error(error?.response?.data?.message || 'Failed to load maintenance data');
     }
+
+    setLoading(false);
   };
 
   const filteredMaintenance = maintenance.filter((item) => {

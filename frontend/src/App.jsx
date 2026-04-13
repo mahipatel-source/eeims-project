@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './context/AuthContext';
 import RoleRoute from './components/layout/RoleRoute';
 
 // auth pages
@@ -48,9 +47,8 @@ import MyHistory from './pages/user/my-history/Index';
 const App = () => {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Toaster position="top-right" />
-        <Routes>
+      <Toaster position="top-right" />
+      <Routes>
           {/* public routes */}
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
@@ -208,7 +206,6 @@ const App = () => {
             </RoleRoute>
           } />
         </Routes>
-      </AuthProvider>
     </BrowserRouter>
   );
 };

@@ -9,7 +9,17 @@ const seedAdmin = async () => {
     const existingAdmin = await User.findOne({ where: { role: 'admin' } });
 
     if (existingAdmin) {
-      console.log('✅ Admin already exists');
+      const passwordMatches = await bcrypt.compare(adminPassword, existingAdmin.password);
+      const needsUpdate = existingAdmin.email !== adminEmail || !passwordMatches;
+
+      if (needsUpdate) {
+        existingAdmin.email = adminEmail;
+        existingAdmin.password = adminPassword;
+        await existingAdmin.save();
+        console.log(`✅ Admin updated: ${adminEmail}`);
+      } else {
+        console.log('✅ Admin already exists');
+      }
       return;
     }
 

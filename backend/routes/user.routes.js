@@ -7,10 +7,18 @@ const { authorizeRoles } = require('../middleware/role.middleware');
 // get all users — admin only
 router.get('/', authenticate, authorizeRoles('admin'), userController.getAllUsers);
 
-// get single user — admin sees any, others see own only
+// get employees only — admin and manager can access
+// used in manager issue equipment dropdown
+router.get('/employees', authenticate, authorizeRoles('admin', 'manager'), userController.getEmployees);
+
+// get technicians only — admin can access
+// used in admin maintenance scheduling dropdown
+router.get('/technicians', authenticate, authorizeRoles('admin'), userController.getTechnicians);
+
+// get single user
 router.get('/:id', authenticate, userController.getUserById);
 
-// create user — admin only (manager/technician)
+// create user — admin only
 router.post('/', authenticate, authorizeRoles('admin'), userController.createUser);
 
 // update user — admin only
